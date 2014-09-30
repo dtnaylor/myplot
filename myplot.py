@@ -3,8 +3,8 @@ import numpy as np # import needed?
 matplotlib.use('PDF')  # save plots as PDF
 font = {'size': 20,
 }
-        #'serif': 'Times New Roman',
-        #'family': 'serif'}
+#  'serif': 'Times New Roman',
+#  'family': 'serif'}
 matplotlib.rc('font', **font)
 
 # use type 1 fonts
@@ -77,8 +77,9 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          colors=None, axis=None, legend_text_size=20, filename=None,\
          xscale=None, yscale=None, type='series', bins=10, yerrs=None,\
          width_scale=1, height_scale=1, xlim=None, ylim=None,\
-         bar_width=0.35, label_bars=False, bar_padding=0,\
+         label_bars=False, bar_width=1, bar_group_padding=1,\
          show_y_tick_labels=True, show_x_tick_labels=True,\
+         grid=False,\
          fig=None, ax=None,\
          **kwargs):
      # TODO: split series and hist into two different functions?
@@ -138,16 +139,22 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
                 ax.fill_between(xs[i], numpy.array(ys[i])+numpy.array(yerrs[i]),\
                 numpy.array(ys[i])-numpy.array(yerrs[i]), color=colors[i], alpha=0.5)
     elif type == 'bar':
+        num_groups = max([len(series) for series in ys])  # num clusters of bars
+        num_series = len(ys)   # num bars in each cluster
+        group_width = bar_width * num_series
+        ind = np.arange(bar_group_padding/2.0,\
+            num_groups*(bar_width*num_series+bar_group_padding) + bar_group_padding/2.0,\
+            group_width + bar_group_padding)
+        
         color_squares = []
         for i in range(len(ys)):
-            N = len(ys[i])
-            ind = np.arange(N) + bar_padding
-            rects = ax.bar(ind + i*bar_width, ys[i], bar_width)
+            rects = ax.bar(ind + i*bar_width, ys[i], bar_width, color=colors[i])
             color_squares.append(rects[0])
             if label_bars: autolabel(rects, ax)
-        ax.set_xticks(ind + len(ys)/2.0*bar_width)
+
+        ax.set_xticks(ind + num_series/2.0*bar_width)
         ax.set_xticklabels(xs[0], rotation=25)
-        ax.set_xlim(0, ind[-1]+(len(ys))*bar_width+bar_padding)
+        ax.set_xlim(0, ind[-1]+group_width+bar_group_padding/2.0)
         if labels: ax.legend(color_squares, labels)
     elif type == 'hist':
         ax.hist(xs, bins=bins, **kwargs)
@@ -185,6 +192,10 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
             
     else:
         ax.legend_ = None  # TODO: hacky
+
+    # show grid lines?
+    if grid:
+        plt.grid()
 
     # make sure no text is clipped along the boundaries
     plt.tight_layout()

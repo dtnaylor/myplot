@@ -157,7 +157,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
             if label_bars: autolabel(rects, ax)
 
         ax.set_xticks(ind + num_series/2.0*bar_width)
-        ax.set_xticklabels(xs[0], rotation=25)
+        ax.set_xticklabels(xs[0], horizontalalignment='right', rotation=45)
         ax.set_xlim(0, ind[-1]+group_width+bar_group_padding/2.0)
         if labels: ax.legend(color_squares, labels)
     elif type == 'hist':

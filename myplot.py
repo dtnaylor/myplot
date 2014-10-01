@@ -128,6 +128,10 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         linestyles = []
         for i in range(len(ys)):
             linestyles.append(default_linestyles[i%len(default_linestyles)])
+    else:
+        for i in range(len(linestyles)):
+            if isinstance(linestyles[i], int):
+                linestyles[i] = default_linestyles[linestyles[i]]
 
     if type == 'series':
         for i in range(len(ys)):

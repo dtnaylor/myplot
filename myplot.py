@@ -212,6 +212,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
 
 # TODO: make this handle more than red/green...
 # TODO: merge this with plot()
+# matrix should be a list of lists. element 0, 0 is in the bottom left
 def heatmap(matrix, xlabel=None, ylabel=None, filename=None):
 
     plt.pcolor(np.array(matrix), cmap='RdYlGn')

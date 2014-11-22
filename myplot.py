@@ -21,6 +21,9 @@ matplotlib.rcParams['ps.fonttype'] = 42
 import matplotlib.pyplot as plt
 import numpy
 from scipy.stats import cumfreq
+from matplotlib.colors import Normalize
+
+
 
 def cdf_vals_from_data(data, numbins=None):
 
@@ -214,17 +217,53 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
 
     return lines, labels  # making an overall figure legend
 
-# TODO: make this handle more than red/green...
+
+
+
+
+
+# for heatmaps where some values are positive and some are negative.
+# lets you specify the middle color to be 0
+# http://stackoverflow.com/questions/20144529/shifted-colorbar-matplotlib/20146989
+class MidpointNormalize(Normalize):
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        # I'm ignoring masked values and all kinds of edge cases to make a
+        # simple example...
+
+        # make sure the absolute values of the extremes match so color
+        # intensities are comparable
+        # TODO: don't need to do this every time.
+        if self.vmin < 0 and self.vmax > 0:
+            extreme = max(abs(self.vmin), abs(self.vmax))
+            self.vmin = -extreme
+            self.vmax = extreme
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y))
+
+
+
 # TODO: merge this with plot()
 # matrix should be a list of lists. element 0, 0 is in the bottom left
-def heatmap(matrix, xlabel=None, ylabel=None, filename=None):
+def heatmap(matrix, colorbar=True, colorbar_label=None, color_map=plt.cm.Blues,\
+        normalize_pos_neg=False,\
+        xlabel=None, ylabel=None, filename=None):
 
-    plt.pcolor(np.array(matrix), cmap='RdYlGn')
-    if xlabel: plt.xlabel(xlabel)
-    if ylabel: plt.ylabel(ylabel)
+    # TODO: if colorbar=False, don't make second axes
+    #fig, ax = plt.subplots()
+    fig = plt.figure()
+    heatmap_ax = plt.subplot2grid((1, 7), (0, 0), colspan=6)
+    colorbar_ax = plt.subplot2grid((1, 7), (0, 6))
+
+    norm = MidpointNormalize(midpoint=0) if normalize_pos_neg else None
+    heatmap = heatmap_ax.pcolor(np.array(matrix), norm=norm, cmap=color_map)
+
+    if xlabel: heatmap_ax.set_xlabel(xlabel)
+    if ylabel: heatmap_ax.set_ylabel(ylabel)
     
-    # make sure no text is clipped along the boundaries
-    plt.tight_layout()
 
     # FIXME hardcoded stuff that shouldn't be
     plt.tick_params(\
@@ -242,11 +281,20 @@ def heatmap(matrix, xlabel=None, ylabel=None, filename=None):
         #labelleft='off',
     )
 
+    
+    if colorbar:
+        cbar = plt.colorbar(heatmap, cax=colorbar_ax)
+        if colorbar_label: cbar.ax.set_ylabel(colorbar_label, rotation=90)
+    
+    # make sure no text is clipped along the boundaries
+    plt.tight_layout()
+>>>>>>> 40684484bcb7ec6915144eeda7ff0abcb30a97fe
 
     if filename == None:
         plt.show()
     else:
         plt.savefig(filename)
+
 
 def cdf(data, numbins=None, **kwargs):
     '''Wrapper for making CDFs'''

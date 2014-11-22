@@ -76,6 +76,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          legend_cols=1, linewidths=None, legend_border=False,\
          colors=None, axis=None, legend_text_size=20, filename=None,\
          xscale=None, yscale=None, type='series', bins=10, yerrs=None,\
+         additional_yscales=None,\
          width_scale=1, height_scale=1, xlim=None, ylim=None,\
          label_bars=False, bar_width=1, bar_group_padding=1,\
          show_y_tick_labels=True, show_x_tick_labels=True,\
@@ -174,8 +175,11 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
             addl_y_axes.append(new_ax)
             new_ax.set_ylabel(label, fontsize=ylabel_size)
             #new_ax.set_yticklabels([]) # temp
+            if additional_yscales:
+                new_ax.set_yscale(additional_yscales[0])  # TODO: use real index!
             if additional_ylims:
                 new_ax.set_ylim(additional_ylims[0])  # TODO: use real index!
+                
 
         # plot the extra series
         for i in range(len(ys)):
@@ -226,15 +230,17 @@ def heatmap(matrix, xlabel=None, ylabel=None, filename=None):
     plt.tick_params(\
         axis='x',          # changes apply to the x-axis
         which='both',      # both major and minor ticks are affected
-        bottom='off',      # ticks along the bottom edge are off
-        top='off',         # ticks along the top edge are off
-        labelbottom='off') # labels along the bottom edge are off
+        #bottom='off',      # ticks along the bottom edge are off
+        #top='off',         # ticks along the top edge are off
+        #labelbottom='off', # labels along the bottom edge are off
+    )
     plt.tick_params(\
         axis='y',          # changes apply to the x-axis
         which='both',      # both major and minor ticks are affected
-        left='off',
-        right='off',
-        labelleft='off')
+        #left='off',
+        #right='off',
+        #labelleft='off',
+    )
 
 
     if filename == None:

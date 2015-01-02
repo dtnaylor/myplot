@@ -102,6 +102,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         width, height = fig.get_size_inches()
         fig.set_size_inches(width*width_scale, height*height_scale)
 
+
     if xlabel: ax.set_xlabel(xlabel, fontsize=xlabel_size)
     if ylabel: ax.set_ylabel(ylabel, fontsize=ylabel_size)
     if not show_x_tick_labels: ax.set_xticklabels([])
@@ -140,6 +141,18 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     if type == 'series':
         for i in range(len(ys)):
             if axis_assignments[i] != 0: continue
+    
+            # If X axis points are strings, make a dummy x array
+            try:
+                float(xs[i][0])
+            except ValueError:
+                xtick_labels = xs[i]
+                xs[i] = np.arange(len(xtick_labels))
+                ax.set_xticks(xs[i], xtick_labels)
+                ax.set_xticks(xs[i])
+                ax.set_xticklabels(xtick_labels, horizontalalignment='right', rotation=45)
+
+            # Plot!
             line, = ax.plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
                 linewidth=linewidths[i], color=colors[i], label=labels[i], **kwargs)
             lines[i] = line
@@ -288,7 +301,6 @@ def heatmap(matrix, colorbar=True, colorbar_label=None, color_map=plt.cm.Blues,\
     
     # make sure no text is clipped along the boundaries
     plt.tight_layout()
->>>>>>> 40684484bcb7ec6915144eeda7ff0abcb30a97fe
 
     if filename == None:
         plt.show()

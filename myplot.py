@@ -116,6 +116,34 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     if xlim: ax.set_xlim(xlim)
     if ylim: ax.set_ylim(ylim)
     lines = [None]*len(ys)
+            
+            
+    # If X axis points are strings, make a dummy x array for each string x list.
+    # not each series might have a data point for each X value, so we need to 
+    # make a "master" xtick label list with all of the X values in right order
+    # FIXME: for now, assuming they're sortable. should add option for caller to
+    # pass the master list in case they're not sortable.
+    # NOTE: for now, this assumes that either all series have numeric X axes or
+    # none do.
+    master_xticks = None
+    master_xnums = None
+    try:
+        float(xs[0][0])
+    except ValueError:
+        # make & sort list of all X tick labels used by any series
+        master_xticks = set()
+        for i in range(len(xs)):
+            master_xticks |= set(xs[i])
+        master_xticks = sorted(list(master_xticks))
+        master_xnums = np.arange(len(master_xticks))
+
+        # replace each old string with its index in master_xticks
+        for i in range(len(xs)):
+            new_x = []
+            for val in xs[i]:
+                new_x.append(master_xticks.index(val))
+            xs[i] = new_x
+
 
     show_legend = show_legend and labels != None
     if not labels: labels = ['']*len(ys)
@@ -141,24 +169,21 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     if type == 'series':
         for i in range(len(ys)):
             if axis_assignments[i] != 0: continue
-    
-            # If X axis points are strings, make a dummy x array
-            try:
-                float(xs[i][0])
-            except ValueError:
-                xtick_labels = xs[i]
-                xs[i] = np.arange(len(xtick_labels))
-                ax.set_xticks(xs[i], xtick_labels)
-                ax.set_xticks(xs[i])
-                ax.set_xticklabels(xtick_labels, horizontalalignment='right', rotation=45)
 
-            # Plot!
+            # Plot
             line, = ax.plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
                 linewidth=linewidths[i], color=colors[i], label=labels[i], **kwargs)
             lines[i] = line
+
             if yerrs:
                 ax.fill_between(xs[i], numpy.array(ys[i])+numpy.array(yerrs[i]),\
                 numpy.array(ys[i])-numpy.array(yerrs[i]), color=colors[i], alpha=0.5)
+
+            if master_xticks:
+                #ax.set_xticks(xs[i], xtick_labels)
+                ax.set_xticks(master_xnums)
+                ax.set_xticklabels(master_xticks, horizontalalignment='right', rotation=45)
+
     elif type == 'bar':
         num_groups = max([len(series) for series in ys])  # num clusters of bars
         num_series = len(ys)   # num bars in each cluster

@@ -82,6 +82,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          additional_yscales=None,\
          width_scale=1, height_scale=1, xlim=None, ylim=None,\
          label_bars=False, bar_width=1, bar_group_padding=1,\
+         xticks=None, xtick_labels=None,\
          show_y_tick_labels=True, show_x_tick_labels=True,\
          grid=False,\
          fig=None, ax=None,\
@@ -127,22 +128,23 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     # none do.
     master_xticks = None
     master_xnums = None
-    try:
-        float(xs[0][0])
-    except ValueError:
-        # make & sort list of all X tick labels used by any series
-        master_xticks = set()
-        for i in range(len(xs)):
-            master_xticks |= set(xs[i])
-        master_xticks = sorted(list(master_xticks))
-        master_xnums = np.arange(len(master_xticks))
+    if type != 'stackplot':
+        try:
+            float(xs[0][0])
+        except ValueError:
+            # make & sort list of all X tick labels used by any series
+            master_xticks = set()
+            for i in range(len(xs)):
+                master_xticks |= set(xs[i])
+            master_xticks = sorted(list(master_xticks))
+            master_xnums = np.arange(len(master_xticks))
 
-        # replace each old string with its index in master_xticks
-        for i in range(len(xs)):
-            new_x = []
-            for val in xs[i]:
-                new_x.append(master_xticks.index(val))
-            xs[i] = new_x
+            # replace each old string with its index in master_xticks
+            for i in range(len(xs)):
+                new_x = []
+                for val in xs[i]:
+                    new_x.append(master_xticks.index(val))
+                xs[i] = new_x
 
 
     show_legend = show_legend and labels != None
@@ -179,10 +181,6 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
                 ax.fill_between(xs[i], numpy.array(ys[i])+numpy.array(yerrs[i]),\
                 numpy.array(ys[i])-numpy.array(yerrs[i]), color=colors[i], alpha=0.5)
 
-            if master_xticks:
-                #ax.set_xticks(xs[i], xtick_labels)
-                ax.set_xticks(master_xnums)
-                ax.set_xticklabels(master_xticks, horizontalalignment='right', rotation=45)
 
     elif type == 'bar':
         num_groups = max([len(series) for series in ys])  # num clusters of bars
@@ -207,6 +205,18 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     elif type == 'stackplot':
         lines = ax.stackplot(xs, ys)
         ax.set_xticks(np.arange(min(xs), max(xs)+1, 1.0))
+
+            
+    # Set xticks and labels, if non-default values provided        
+    if xticks:
+        ax.set_xticks(xticks)
+        if xtick_labels:
+            ax.set_xticklabels(xtick_labels, horizontalalignment='right', rotation=45)
+    elif master_xticks:
+        #ax.set_xticks(xs[i], xtick_labels)
+        ax.set_xticks(master_xnums)
+        ax.set_xticklabels(master_xticks, horizontalalignment='right', rotation=45)
+
 
     # Additional axes?
     if additional_ylabels:

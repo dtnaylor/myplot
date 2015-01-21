@@ -82,8 +82,10 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          additional_yscales=None,\
          width_scale=1, height_scale=1, xlim=None, ylim=None,\
          label_bars=False, bar_width=1, bar_group_padding=1,\
-         xticks=None, xtick_labels=None,\
+         xticks=None, xtick_labels=None, xtick_label_rotation=0,\
+         xtick_label_horizontal_alignment='center',\
          show_y_tick_labels=True, show_x_tick_labels=True,\
+         stackbar_pattern_labels=None,\
          grid=False,\
          fig=None, ax=None,\
          **kwargs):
@@ -128,7 +130,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     # none do.
     master_xticks = None
     master_xnums = None
-    if type != 'stackplot':
+    if type not in ('stackplot', 'bar', 'stackbar'):
         try:
             float(xs[0][0])
         except ValueError:
@@ -182,24 +184,60 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
                 numpy.array(ys[i])-numpy.array(yerrs[i]), color=colors[i], alpha=0.5)
 
 
-    elif type == 'bar':
-        num_groups = max([len(series) for series in ys])  # num clusters of bars
-        num_series = len(ys)   # num bars in each cluster
+    elif type == 'bar' or type == 'stackbar':
+        if type == 'bar':
+            num_groups = max([len(series) for series in ys])  # num clusters of bars
+            num_series = len(ys)   # num bars in each cluster
+        elif type == 'stackbar':
+            num_groups = max([len(series) for x in ys for series in x])  # num clusters of bars
+            num_series = len(ys)   # num bars in each cluster
+
         group_width = bar_width * num_series
         ind = np.arange(bar_group_padding/2.0,\
             num_groups*(bar_width*num_series+bar_group_padding) + bar_group_padding/2.0,\
             group_width + bar_group_padding)
         
+        patterns = ('/', '//', '-', '+', 'x', '\\', '\\\\', '*', 'o', 'O', '.')
+
         color_squares = []
         for i in range(len(ys)):
-            rects = ax.bar(ind + i*bar_width, ys[i], bar_width, color=colors[i])
-            color_squares.append(rects[0])
-            if label_bars: autolabel(rects, ax)
+
+            if type == 'bar':
+                rects = ax.bar(ind + i*bar_width, ys[i], bar_width, color=colors[i])
+                color_squares.append(rects[0])
+                if label_bars: autolabel(rects, ax)
+            elif type == 'stackbar':
+                for j in range(len(ys[i])):
+                    if j == 0:
+                        rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width, color=colors[i], hatch=patterns[j])
+                        rects[0].set_hatch(None)
+                        color_squares.append(rects[0])
+                    else:
+                        rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width, bottom=ys[i][j-1], color=colors[i], hatch=patterns[j])
+                    #if label_bars: autolabel(rects, ax)  TODO: support
+
+                # Add invisible data to add another legend for patterns
+                if i == 0:  # only do this once   FIXME what if first series doesn't have all segments?
+                    num_segments = len(ys[i])
+                    n=[]
+                    for k in range(num_segments):
+                        n.append(ax.bar(0,0,color = "gray", hatch=patterns[k]))
+                    if stackbar_pattern_labels:
+                        pattern_legend = ax.legend(reversed(n), reversed(stackbar_pattern_labels),\
+                            loc='upper center', ncol=legend_cols, frameon=legend_border,\
+                            labelspacing=labelspacing, handletextpad=handletextpad,\
+                            prop={'size':legend_text_size})
+                        ax.add_artist(pattern_legend)
+                        
+                    
 
         ax.set_xticks(ind + num_series/2.0*bar_width)
-        ax.set_xticklabels(xs[0], horizontalalignment='right', rotation=45)
+        ax.set_xticklabels(xs[0], horizontalalignment=xtick_label_horizontal_alignment,\
+            rotation=xtick_label_rotation)
         ax.set_xlim(0, ind[-1]+group_width+bar_group_padding/2.0)
-        if labels: ax.legend(color_squares, labels)
+
+        # for legend, used below
+        lines = color_squares
     elif type == 'hist':
         ax.hist(xs, bins=bins, **kwargs)
     elif type == 'stackplot':
@@ -211,11 +249,10 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     if xticks:
         ax.set_xticks(xticks)
         if xtick_labels:
-            ax.set_xticklabels(xtick_labels, horizontalalignment='right', rotation=45)
+            ax.set_xticklabels(xtick_labels, horizontalalignment='right', rotation=xtick_label_rotation)
     elif master_xticks:
-        #ax.set_xticks(xs[i], xtick_labels)
         ax.set_xticks(master_xnums)
-        ax.set_xticklabels(master_xticks, horizontalalignment='right', rotation=45)
+        ax.set_xticklabels(master_xticks, horizontalalignment='right', rotation=xtick_label_rotation)
 
 
     # Additional axes?
@@ -352,6 +389,22 @@ def cdf(data, numbins=None, **kwargs):
         xs.append(x)
         ys.append(y)
     return plot(xs, ys, ylabel='CDF', marker=None, **kwargs)
+
+def bar(xs, ys, xtick_label_rotation=45,\
+    xtick_label_horizontal_alignment='right', **kwargs):
+    '''Wrapper for bar charts'''
+
+    return plot(xs, ys, type='bar', xtick_label_rotation=xtick_label_rotation,\
+        xtick_label_horizontal_alignment=xtick_label_horizontal_alignment,\
+        **kwargs)
+
+def stackbar(xs, ys, xtick_label_rotation=45,\
+    xtick_label_horizontal_alignment='right', **kwargs):
+    '''Wrapper for bar charts'''
+
+    return plot(xs, ys, type='stackbar', xtick_label_rotation=xtick_label_rotation,\
+        xtick_label_horizontal_alignment=xtick_label_horizontal_alignment,\
+        **kwargs)
 
 def stackplot(ys, sortindex=-1, **kwargs):
     '''Wrapper for making stackplots'''

@@ -95,8 +95,23 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
      # TODO: legend loc, replace 'bottom' with lower and 'top' with 'upper'
      # TODO: what is the default labelspacing?
 
-    default_colors = ['b', 'g', 'r', 'c', 'm', 'y']
+    #default_colors = ['b', 'g', 'r', 'c', 'm', 'y']
     #default_colors = ['#348ABD', '#7A68A6', '#A60628', '#467821', '#CF4457', '#188487', '#E24A33']
+
+    #http://www.randalolson.com/2014/06/28/how-to-make-beautiful-data-visualizations-in-python-with-matplotlib/
+    default_colors = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),  
+                 (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),  
+                 (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),  
+                 (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),  
+                 (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]
+    # Scale the RGB values to the [0, 1] range, which is the format matplotlib accepts.  
+    for i in range(len(default_colors)):  
+        r, g, b = default_colors[i]  
+        default_colors[i] = (r / 255., g / 255., b / 255.) 
+
+    # remove every other color (faded version)
+    default_colors = [default_colors[i] for i in range(len(default_colors)) if i % 2 == 0]
+
     default_linestyles = ['-', '--', '-.', ':']
     
     # if we want to do subplots, caller may have passed in an existing figure
@@ -197,7 +212,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
             num_groups*(bar_width*num_series+bar_group_padding) + bar_group_padding/2.0,\
             group_width + bar_group_padding)
         
-        patterns = ('/', '//', '-', '+', 'x', '\\', '\\\\', '*', 'o', 'O', '.')
+        patterns = (None, '/', '\\', 'o', '*', '+', '//', '\\\\', '-', 'x', 'O', '.')
 
         color_squares = []
         for i in range(len(ys)):
@@ -207,13 +222,12 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
                 color_squares.append(rects[0])
                 if label_bars: autolabel(rects, ax)
             elif type == 'stackbar':
+                bottom = [0]*len(ys[i][0])  # keep cumulative sum of height of each bar (bottom of next segment)
                 for j in range(len(ys[i])):
+                    rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width, bottom=bottom, color=colors[i], hatch=patterns[j])
+                    bottom = [sum(x) for x in zip(bottom, ys[i][j])]
                     if j == 0:
-                        rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width, color=colors[i], hatch=patterns[j])
-                        rects[0].set_hatch(None)
                         color_squares.append(rects[0])
-                    else:
-                        rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width, bottom=ys[i][j-1], color=colors[i], hatch=patterns[j])
                     #if label_bars: autolabel(rects, ax)  TODO: support
 
                 # Add invisible data to add another legend for patterns

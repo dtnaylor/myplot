@@ -39,6 +39,7 @@ default_style = {
     'frame_lines':{'top':True, 'right':True, 'bottom':True, 'left':True},
     'tick_marks':{'top':True, 'right':True, 'bottom':True, 'left':True},
     'bar_edgecolor':'black',
+    'errorbar_style':'line',
 }
 
 
@@ -67,6 +68,7 @@ pretty_style = {
     'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
     'tick_marks':{'top':False, 'right':False, 'bottom':True, 'left':True},
     'bar_edgecolor':'white',
+    'errorbar_style':'fill',
 }
     
 
@@ -280,14 +282,22 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         for i in range(len(ys)):
             if axis_assignments[i] != 0: continue
 
-            # Plot
-            line, = ax.plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
-                linewidth=linewidths[i], color=colors[i], label=labels[i], **kwargs)
+
+            # TODO: simplify these two cases? repetitive.
+            if yerrs and style['errorbar_style'] == 'line':
+                line = ax.errorbar(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
+                    linewidth=linewidths[i], color=colors[i], label=labels[i],\
+                    yerr=yerrs[i], **kwargs)
+            else:
+                line, = ax.plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
+                    linewidth=linewidths[i], color=colors[i], label=labels[i], **kwargs)
+
             lines[i] = line
 
-            if yerrs:
-                ax.fill_between(xs[i], numpy.array(ys[i])+numpy.array(yerrs[i]),\
-                numpy.array(ys[i])-numpy.array(yerrs[i]), color=colors[i], alpha=0.5)
+            if yerrs and style['errorbar_style'] == 'fill':
+                yerr_upper = numpy.array(ys[i])+numpy.array(yerrs[i])
+                yerr_lower = numpy.array(ys[i])-numpy.array(yerrs[i])
+                ax.fill_between(xs[i], yerr_lower, yerr_upper, color=colors[i], alpha=0.5)
 
 
     elif type == 'bar' or type == 'stackbar':

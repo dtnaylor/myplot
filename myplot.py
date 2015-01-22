@@ -1,5 +1,8 @@
 import matplotlib  # TODO :needed?
 import numpy as np # import needed?
+
+
+# This stuff needs to be set before we import matplotlib.pyplot
 matplotlib.use('PDF')  # save plots as PDF
 font = {'size': 20,
 }
@@ -24,7 +27,55 @@ from scipy.stats import cumfreq
 from matplotlib.colors import Normalize
 
 
+##
+## STYLES
+##
 
+default_style = {
+    'colors': ('b', 'g', 'r', 'c', 'm', 'y'),
+    'linestyles': ('-', '--', '-.', ':'),
+    'hatchstyles': (None, '/', '\\', 'o', '*', '+', '//', '\\\\', '-', 'x', 'O', '.'),
+    'gridalpha':1.0,
+    'frame_lines':{'top':True, 'right':True, 'bottom':True, 'left':True},
+    'tick_marks':{'top':True, 'right':True, 'bottom':True, 'left':True},
+    'bar_edgecolor':'black',
+}
+
+
+#http://www.randalolson.com/2014/06/28/how-to-make-beautiful-data-visualizations-in-python-with-matplotlib/
+#http://tableaufriction.blogspot.ro/2012/11/finally-you-can-use-tableau-data-colors.html
+tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),  
+             (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),  
+             (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),  
+             (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),  
+             (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]
+
+# Scale the RGB values to the [0, 1] range, which is the format matplotlib accepts.  
+for i in range(len(tableau20)):  
+    r, g, b = tableau20[i]  
+    tableau20[i] = (r / 255., g / 255., b / 255.) 
+
+# remove every other color (light version)
+tableau20 = [tableau20[i] for i in range(len(tableau20)) if i % 2 == 0]
+
+
+pretty_style = {
+    'colors': tableau20,
+    'linestyles': ('-', '--', '-.', ':'),
+    'hatchstyles': (None, '/', '\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
+    'gridalpha':0.3,
+    'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
+    'tick_marks':{'top':False, 'right':False, 'bottom':True, 'left':True},
+    'bar_edgecolor':'white',
+}
+    
+
+
+
+
+##
+## HELPER FUNCTIONS
+##
 def cdf_vals_from_data(data, numbins=None):
 
     # make sure data is a numpy array
@@ -60,6 +111,28 @@ def autolabel(rects, ax):
         ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
                 ha='center', va='bottom')
 
+# for heatmaps where some values are positive and some are negative.
+# lets you specify the middle color to be 0
+# http://stackoverflow.com/questions/20144529/shifted-colorbar-matplotlib/20146989
+class MidpointNormalize(Normalize):
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        # I'm ignoring masked values and all kinds of edge cases to make a
+        # simple example...
+
+        # make sure the absolute values of the extremes match so color
+        # intensities are comparable
+        # TODO: don't need to do this every time.
+        if self.vmin < 0 and self.vmax > 0:
+            extreme = max(abs(self.vmin), abs(self.vmax))
+            self.vmin = -extreme
+            self.vmax = extreme
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y))
+
 def subplots(num_row, num_col, width_scale=1, height_scale=1):
     # TODO: anything helpful we could do here?
     fig, ax_array = plt.subplots(num_row, num_col)
@@ -71,6 +144,10 @@ def save_plot(filename):
     #plt.tight_layout()
     plt.savefig(filename)
 
+
+##
+## PLOT
+##
 def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          additional_ylabels=None, num_series_on_addl_y_axis=0,\
          axis_assignments=None, additional_ylims=None,\
@@ -85,8 +162,8 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          xticks=None, xtick_labels=None, xtick_label_rotation=0,\
          xtick_label_horizontal_alignment='center',\
          show_y_tick_labels=True, show_x_tick_labels=True,\
-         stackbar_pattern_labels=None,\
-         grid=False,\
+         hatchstyles=None, stackbar_pattern_labels=None,\
+         style=pretty_style, grid=None,\
          fig=None, ax=None,\
          **kwargs):
      # TODO: split series and hist into two different functions?
@@ -95,25 +172,6 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
      # TODO: legend loc, replace 'bottom' with lower and 'top' with 'upper'
      # TODO: what is the default labelspacing?
 
-    #default_colors = ['b', 'g', 'r', 'c', 'm', 'y']
-    #default_colors = ['#348ABD', '#7A68A6', '#A60628', '#467821', '#CF4457', '#188487', '#E24A33']
-
-    #http://www.randalolson.com/2014/06/28/how-to-make-beautiful-data-visualizations-in-python-with-matplotlib/
-    default_colors = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),  
-                 (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),  
-                 (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),  
-                 (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),  
-                 (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]
-    # Scale the RGB values to the [0, 1] range, which is the format matplotlib accepts.  
-    for i in range(len(default_colors)):  
-        r, g, b = default_colors[i]  
-        default_colors[i] = (r / 255., g / 255., b / 255.) 
-
-    # remove every other color (faded version)
-    default_colors = [default_colors[i] for i in range(len(default_colors)) if i % 2 == 0]
-
-    default_linestyles = ['-', '--', '-.', ':']
-    
     # if we want to do subplots, caller may have passed in an existing figure
     if not fig or not ax:
         fig, ax = plt.subplots()
@@ -121,6 +179,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         fig.set_size_inches(width*width_scale, height*height_scale)
 
 
+    #################### SETUP ####################
     if xlabel: ax.set_xlabel(xlabel, fontsize=xlabel_size)
     if ylabel: ax.set_ylabel(ylabel, fontsize=ylabel_size)
     if not show_x_tick_labels: ax.set_xticklabels([])
@@ -134,6 +193,10 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     if xlim: ax.set_xlim(xlim)
     if ylim: ax.set_ylim(ylim)
     lines = [None]*len(ys)
+    show_legend = show_legend and labels != None
+    if not labels: labels = ['']*len(ys)
+    if not linewidths: linewidths = [3]*len(ys)
+    if not axis_assignments: axis_assignments = [0]*len(ys)
             
             
     # If X axis points are strings, make a dummy x array for each string x list.
@@ -164,27 +227,55 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
                 xs[i] = new_x
 
 
-    show_legend = show_legend and labels != None
-    if not labels: labels = ['']*len(ys)
-    if not linewidths: linewidths = [3]*len(ys)
-    if not axis_assignments: axis_assignments = [0]*len(ys)
+
+    #################### STYLE ####################
     if not colors:
         colors = []
         for i in range(len(ys)):
-            colors.append(default_colors[i%len(default_colors)])
+            colors.append(style['colors'][i%len(style['colors'])])
     else:
         for i in range(len(colors)):
             if isinstance(colors[i], int):
-                colors[i] = default_colors[colors[i]]
+                colors[i] = style['colors'][colors[i]]
+
     if not linestyles:
         linestyles = []
         for i in range(len(ys)):
-            linestyles.append(default_linestyles[i%len(default_linestyles)])
+            linestyles.append(style['linestyles'][i%len(style['linestyles'])])
     else:
         for i in range(len(linestyles)):
             if isinstance(linestyles[i], int):
-                linestyles[i] = default_linestyles[linestyles[i]]
+                linestyles[i] = style['linestyles'][linestyles[i]]
 
+    if not hatchstyles:
+        hatchstyles = []
+        for i in range(len(ys[0])):
+            hatchstyles.append(style['hatchstyles'][i%len(style['hatchstyles'])])
+    else:
+        for i in range(len(hatchstyles)):
+            if isinstance(hatchstyles[i], int):
+                hatchstyles[i] = style['hatchstyles'][hatchstyles[i]]
+
+    # frame lines
+    for side, visible in style['frame_lines'].iteritems():
+        ax.spines[side].set_visible(visible)
+
+    # tick marks  (spacing and labels set below)
+    ax.tick_params(**style['tick_marks'])
+    
+    # show grid lines?
+    if grid:
+        grid_args = {'zorder':0, 'alpha':style['gridalpha']}
+        if grid == 'x':
+            ax.xaxis.grid(**grid_args)
+        elif grid == 'y':
+            ax.yaxis.grid(**grid_args)
+        else:
+            plt.grid(**grid_args)
+
+
+
+    #################### PLOT ####################
     if type == 'series':
         for i in range(len(ys)):
             if axis_assignments[i] != 0: continue
@@ -212,19 +303,20 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
             num_groups*(bar_width*num_series+bar_group_padding) + bar_group_padding/2.0,\
             group_width + bar_group_padding)
         
-        patterns = (None, '/', '\\', 'o', '*', '+', '//', '\\\\', '-', 'x', 'O', '.')
 
         color_squares = []
         for i in range(len(ys)):
 
             if type == 'bar':
-                rects = ax.bar(ind + i*bar_width, ys[i], bar_width, color=colors[i])
+                rects = ax.bar(ind + i*bar_width, ys[i], bar_width, color=colors[i], zorder=3)
                 color_squares.append(rects[0])
                 if label_bars: autolabel(rects, ax)
             elif type == 'stackbar':
                 bottom = [0]*len(ys[i][0])  # keep cumulative sum of height of each bar (bottom of next segment)
                 for j in range(len(ys[i])):
-                    rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width, bottom=bottom, color=colors[i], hatch=patterns[j])
+                    rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width,\
+                        bottom=bottom, color=colors[i], edgecolor=style['bar_edgecolor'],\
+                        hatch=hatchstyles[j], zorder=3)
                     bottom = [sum(x) for x in zip(bottom, ys[i][j])]
                     if j == 0:
                         color_squares.append(rects[0])
@@ -235,7 +327,8 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
                     num_segments = len(ys[i])
                     n=[]
                     for k in range(num_segments):
-                        n.append(ax.bar(0,0,color = "gray", hatch=patterns[k]))
+                        n.append(ax.bar(0,0,color = "gray", hatch=hatchstyles[k],\
+                            edgecolor=style['bar_edgecolor']))
                     if stackbar_pattern_labels:
                         pattern_legend = ax.legend(reversed(n), reversed(stackbar_pattern_labels),\
                             loc='upper center', ncol=legend_cols, frameon=legend_border,\
@@ -303,9 +396,6 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     else:
         ax.legend_ = None  # TODO: hacky
 
-    # show grid lines?
-    if grid:
-        plt.grid()
 
     # make sure no text is clipped along the boundaries
     plt.tight_layout()
@@ -321,29 +411,9 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
 
 
 
-# for heatmaps where some values are positive and some are negative.
-# lets you specify the middle color to be 0
-# http://stackoverflow.com/questions/20144529/shifted-colorbar-matplotlib/20146989
-class MidpointNormalize(Normalize):
-    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
-        self.midpoint = midpoint
-        Normalize.__init__(self, vmin, vmax, clip)
-
-    def __call__(self, value, clip=None):
-        # I'm ignoring masked values and all kinds of edge cases to make a
-        # simple example...
-
-        # make sure the absolute values of the extremes match so color
-        # intensities are comparable
-        # TODO: don't need to do this every time.
-        if self.vmin < 0 and self.vmax > 0:
-            extreme = max(abs(self.vmin), abs(self.vmax))
-            self.vmin = -extreme
-            self.vmax = extreme
-        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
-        return np.ma.masked_array(np.interp(value, x, y))
-
-
+##
+## WRAPPERS (for specific types of plots)
+##
 
 # TODO: merge this with plot()
 # matrix should be a list of lists. element 0, 0 is in the bottom left

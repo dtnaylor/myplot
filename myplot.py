@@ -26,6 +26,8 @@ import numpy
 from scipy.stats import cumfreq
 from matplotlib.colors import Normalize
 
+#plt.xkcd()
+
 
 ##
 ## STYLES
@@ -63,12 +65,12 @@ tableau20 = [tableau20[i] for i in range(len(tableau20)) if i % 2 == 0]
 pretty_style = {
     'colors': tableau20,
     'linestyles': ('-', '--', '-.', ':'),
-    'hatchstyles': (None, '/', '\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
+    'hatchstyles': (None, '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
     'gridalpha':0.3,
     'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
     'tick_marks':{'top':False, 'right':False, 'bottom':True, 'left':True},
     'bar_edgecolor':'white',
-    'errorbar_style':'fill',
+    'errorbar_style':'line',  # fill
 }
     
 
@@ -165,6 +167,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          xtick_label_horizontal_alignment='center',\
          show_y_tick_labels=True, show_x_tick_labels=True,\
          hatchstyles=None, stackbar_pattern_labels=None,\
+         stackbar_colors_denote='series',\
          style=pretty_style, grid=None,\
          fig=None, ax=None,\
          **kwargs):
@@ -199,6 +202,11 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     if not labels: labels = ['']*len(ys)
     if not linewidths: linewidths = [3]*len(ys)
     if not axis_assignments: axis_assignments = [0]*len(ys)
+
+    if type == 'stackbar' and stackbar_colors_denote == 'segments':
+        temp = labels
+        labels = list(reversed(stackbar_pattern_labels))
+        stackbar_pattern_labels = temp
             
             
     # If X axis points are strings, make a dummy x array for each string x list.
@@ -233,7 +241,11 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     #################### STYLE ####################
     if not colors:
         colors = []
-        for i in range(len(ys)):
+        if type=='stackbar' and stackbar_colors_denote=='segments':
+            colors_needed = len(ys[0])
+        else:
+            colors_needed = len(ys)
+        for i in range(colors_needed):
             colors.append(style['colors'][i%len(style['colors'])])
     else:
         for i in range(len(colors)):
@@ -251,7 +263,11 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
 
     if not hatchstyles:
         hatchstyles = []
-        for i in range(len(ys[0])):
+        if type=='stackbar' and stackbar_colors_denote=='segments':
+            hatchstyles_needed = len(ys)
+        else:
+            hatchstyles_needed = len(ys[0])
+        for i in range(hatchstyles_needed):
             hatchstyles.append(style['hatchstyles'][i%len(style['hatchstyles'])])
     else:
         for i in range(len(hatchstyles)):
@@ -324,23 +340,38 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
             elif type == 'stackbar':
                 bottom = [0]*len(ys[i][0])  # keep cumulative sum of height of each bar (bottom of next segment)
                 for j in range(len(ys[i])):
+                    if stackbar_colors_denote == 'series':
+                        color = colors[i]
+                        hatchstyle = hatchstyles[j]
+                    elif stackbar_colors_denote == 'segments':
+                        color = colors[j]
+                        hatchstyle = hatchstyles[i]
+                    
                     rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width,\
-                        bottom=bottom, color=colors[i], edgecolor=style['bar_edgecolor'],\
-                        hatch=hatchstyles[j], zorder=3)
+                        bottom=bottom, color=color, edgecolor=style['bar_edgecolor'],\
+                        hatch=hatchstyle, zorder=3)
                     bottom = [sum(x) for x in zip(bottom, ys[i][j])]
-                    if j == 0:
+                    if stackbar_colors_denote == 'series' and j == 0:
                         color_squares.append(rects[0])
+                    elif stackbar_colors_denote == 'segments' and i == 0:
+                        color_squares.insert(0, rects[0])
                     #if label_bars: autolabel(rects, ax)  TODO: support
 
-                # Add invisible data to add another legend for patterns
+                # Add invisible data to add another legend for segment hatchstyles
                 if i == 0:  # only do this once   FIXME what if first series doesn't have all segments?
-                    num_segments = len(ys[i])
+                    if stackbar_colors_denote == 'series':
+                        num_segments = len(ys[i])
+                    elif stackbar_colors_denote == 'segments':
+                        num_segments = len(ys)
                     n=[]
                     for k in range(num_segments):
                         n.append(ax.bar(0,0,color = "gray", hatch=hatchstyles[k],\
                             edgecolor=style['bar_edgecolor']))
+                    if stackbar_colors_denote == 'series':
+                        n = reversed(n)
+                        stackbar_pattern_labels = reversed(stackbar_patter_labels)
                     if stackbar_pattern_labels:
-                        pattern_legend = ax.legend(reversed(n), reversed(stackbar_pattern_labels),\
+                        pattern_legend = ax.legend(n, stackbar_pattern_labels,\
                             loc='upper center', ncol=legend_cols, frameon=legend_border,\
                             labelspacing=labelspacing, handletextpad=handletextpad,\
                             prop={'size':legend_text_size})

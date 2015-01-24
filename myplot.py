@@ -108,6 +108,29 @@ def cdf_vals_from_data(data, numbins=None):
 
     return cum_bin_counts, x_vals
 
+def endpoints_for_stretched_line(endpoints, xlim, ylim):
+    e1, e2 = endpoints
+    xmin, xmax = xlim
+    ymin, ymax = ylim
+    m = float(e2[1]-e1[1])/float(e2[0]-e1[0])  # slope
+
+    y_for_xmin = m*(xmin-e1[0]) + e1[1]
+    x_for_ymin = ((ymin-e1[1])/m if m != 0 else 0) + e1[0]
+    y_for_xmax = m*(xmax-e1[0]) + e1[1]
+    x_for_ymax = ((ymax-e1[1])/m if m != 0 else 0) + e1[0]
+
+    if y_for_xmin < ymin:
+        new_e1 = (x_for_ymin, ymin)
+    else:
+        new_e1 = (xmin, y_for_xmin)
+
+    if y_for_xmax > ymax:
+        new_e2 = (x_for_ymax, ymax)
+    else:
+        new_e2 = (xmax, y_for_xmax)
+
+    return (new_e1, new_e2)
+
 def autolabel(rects, ax):
     # attach some text labels
     for rect in rects:
@@ -160,7 +183,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          legend_cols=1, linewidths=None, legend_border=False,\
          colors=None, axis=None, legend_text_size=20, filename=None,\
          xscale=None, yscale=None, type='series', bins=10, yerrs=None,\
-         additional_yscales=None,\
+         additional_yscales=None, guide_lines=[],\
          width_scale=1, height_scale=1, xlim=None, ylim=None,\
          label_bars=False, bar_width=1, bar_group_padding=1,\
          xticks=None, xtick_labels=None, xtick_label_rotation=0,\
@@ -168,7 +191,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          show_y_tick_labels=True, show_x_tick_labels=True,\
          hatchstyles=None, stackbar_pattern_labels=None,\
          stackbar_colors_denote='series',\
-         style=pretty_style, grid=None,\
+         style=pretty_style, grid='both',\
          fig=None, ax=None,\
          **kwargs):
      # TODO: split series and hist into two different functions?
@@ -315,7 +338,6 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
                 yerr_lower = numpy.array(ys[i])-numpy.array(yerrs[i])
                 ax.fill_between(xs[i], yerr_lower, yerr_upper, color=colors[i], alpha=0.5)
 
-
     elif type == 'bar' or type == 'stackbar':
         if type == 'bar':
             num_groups = max([len(series) for series in ys])  # num clusters of bars
@@ -393,7 +415,9 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         ax.set_xticks(np.arange(min(xs), max(xs)+1, 1.0))
 
             
-    # Set xticks and labels, if non-default values provided        
+    ##
+    ## X TICKS
+    ##
     if xticks:
         ax.set_xticks(xticks)
         if xtick_labels:
@@ -403,7 +427,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         ax.set_xticklabels(master_xticks, horizontalalignment='right', rotation=xtick_label_rotation)
 
 
-    # Additional axes?
+    #################### ADDITONAL Y AXES ####################
     if additional_ylabels:
         addl_y_axes = []
         for label in additional_ylabels:
@@ -428,6 +452,21 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
                 addl_y_axes[0].fill_between(xs[i], numpy.array(ys[i])+numpy.array(yerrs[i]),\
                 numpy.array(ys[i])-numpy.array(yerrs[i]), color=colors[i], alpha=0.5)
 
+
+    #################### GUIDE LINES ####################
+    for line in guide_lines:
+        if line['stretch']:
+            # compute new endpoints at edges of plot boundaries
+            line['endpoints'] = endpoints_for_stretched_line(\
+                line['endpoints'], ax.get_xlim(), ax.get_ylim())
+
+        (line_xs, line_ys) = zip(*line['endpoints'])
+        ax.add_line(matplotlib.lines.Line2D(line_xs, line_ys, zorder=1, **line['line_args']))
+        ax.text(line['endpoints'][1][0], line['endpoints'][1][1], line['label'],\
+            ha='right', **line['label_args'])
+
+
+    #################### LEGEND ####################
     if show_legend and labels: 
         if type == 'stackplot':
             lines = [matplotlib.patches.Rectangle((0,0), 0,0, facecolor=pol.get_facecolor()[0]) for pol in lines]

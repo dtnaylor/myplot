@@ -22,6 +22,7 @@ matplotlib.rcParams['ps.fonttype'] = 42
 
 
 import matplotlib.pyplot as plt
+import matplotlib.ticker
 import numpy
 from scipy.stats import cumfreq
 from matplotlib.colors import Normalize
@@ -37,6 +38,7 @@ default_style = {
     'colors': ('b', 'g', 'r', 'c', 'm', 'y'),
     'linestyles': ('-', '--', '-.', ':'),
     'hatchstyles': (None, '/', '\\', 'o', '*', '+', '//', '\\\\', '-', 'x', 'O', '.'),
+    'textsize_delta': 0,
     'gridalpha':1.0,
     'frame_lines':{'top':True, 'right':True, 'bottom':True, 'left':True},
     'tick_marks':{'top':True, 'right':True, 'bottom':True, 'left':True},
@@ -66,6 +68,7 @@ pretty_style = {
     'colors': tableau20,
     'linestyles': ('-', '--', '-.', ':'),
     'hatchstyles': (None, '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
+    'textsize_delta': 4,
     'gridalpha':0.3,
     'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
     'tick_marks':{'top':False, 'right':False, 'bottom':True, 'left':True},
@@ -189,6 +192,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          xticks=None, xtick_labels=None, xtick_label_rotation=0,\
          xtick_label_horizontal_alignment='center',\
          show_y_tick_labels=True, show_x_tick_labels=True,\
+         ticklabel_size=20,\
          hatchstyles=None, stackbar_pattern_labels=None,\
          stackbar_colors_denote='series',\
          style=pretty_style, grid='both',\
@@ -208,8 +212,8 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
 
 
     #################### SETUP ####################
-    if xlabel: ax.set_xlabel(xlabel, fontsize=xlabel_size)
-    if ylabel: ax.set_ylabel(ylabel, fontsize=ylabel_size)
+    if xlabel: ax.set_xlabel(xlabel, fontsize=xlabel_size + style['textsize_delta'])
+    if ylabel: ax.set_ylabel(ylabel, fontsize=ylabel_size + style['textsize_delta'])
     if not show_x_tick_labels: ax.set_xticklabels([])
     if not show_y_tick_labels: ax.set_yticklabels([])
     if title: ax.set_title(title)
@@ -273,7 +277,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     else:
         for i in range(len(colors)):
             if isinstance(colors[i], int):
-                colors[i] = style['colors'][colors[i]]
+                colors[i] = style['colors'][colors[i]%len(style['colors'])]
 
     if not linestyles:
         linestyles = []
@@ -302,7 +306,8 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         ax.spines[side].set_visible(visible)
 
     # tick marks  (spacing and labels set below)
-    ax.tick_params(**style['tick_marks'])
+    ax.tick_params(labelsize=ticklabel_size + style['textsize_delta'],\
+        **style['tick_marks'])
     
     # show grid lines?
     if grid:
@@ -350,13 +355,18 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         ind = np.arange(bar_group_padding/2.0,\
             num_groups*(bar_width*num_series+bar_group_padding) + bar_group_padding/2.0,\
             group_width + bar_group_padding)
+
+        log = yscale == 'log'
         
 
         color_squares = []
         for i in range(len(ys)):
 
             if type == 'bar':
-                rects = ax.bar(ind + i*bar_width, ys[i], bar_width, color=colors[i], zorder=3)
+                yerr=yerrs[i] if yerrs else None
+                rects = ax.bar(ind + i*bar_width, ys[i], bar_width, log=log,\
+                    yerr=yerr, error_kw={'zorder':4, 'ecolor':'black'},
+                    color=colors[i], edgecolor=style['bar_edgecolor'], zorder=3)
                 color_squares.append(rects[0])
                 if label_bars: autolabel(rects, ax)
             elif type == 'stackbar':
@@ -369,7 +379,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
                         color = colors[j]
                         hatchstyle = hatchstyles[i]
                     
-                    rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width,\
+                    rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width, log=log,\
                         bottom=bottom, color=color, edgecolor=style['bar_edgecolor'],\
                         hatch=hatchstyle, zorder=3)
                     bottom = [sum(x) for x in zip(bottom, ys[i][j])]
@@ -396,7 +406,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
                         pattern_legend = ax.legend(n, stackbar_pattern_labels,\
                             loc='upper center', ncol=legend_cols, frameon=legend_border,\
                             labelspacing=labelspacing, handletextpad=handletextpad,\
-                            prop={'size':legend_text_size})
+                            prop={'size':legend_text_size + style['textsize_delta']})
                         ax.add_artist(pattern_legend)
                         
                     
@@ -425,6 +435,18 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     elif master_xticks:
         ax.set_xticks(master_xnums)
         ax.set_xticklabels(master_xticks, horizontalalignment='right', rotation=xtick_label_rotation)
+    if xscale == 'log':
+        #ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, pos: str(int(round(x)))))
+        ax.xaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter('%d'))
+        #ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    
+    ##
+    ## Y TICKS
+    ##
+    if yscale == 'log':
+        #ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, pos: str(int(round(x)))))
+        ax.yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter('%d'))
+        #ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
 
 
     #################### ADDITONAL Y AXES ####################
@@ -433,7 +455,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         for label in additional_ylabels:
             new_ax = ax.twinx()
             addl_y_axes.append(new_ax)
-            new_ax.set_ylabel(label, fontsize=ylabel_size)
+            new_ax.set_ylabel(label, fontsize=ylabel_size + style['textsize_delta'])
             #new_ax.set_yticklabels([]) # temp
             if additional_yscales:
                 new_ax.set_yscale(additional_yscales[0])  # TODO: use real index!
@@ -462,7 +484,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
 
         (line_xs, line_ys) = zip(*line['endpoints'])
         ax.add_line(matplotlib.lines.Line2D(line_xs, line_ys, zorder=1, **line['line_args']))
-        ax.text(line['endpoints'][1][0], line['endpoints'][1][1], line['label'],\
+        ax.text(line['endpoints'][1][0]+1, line['endpoints'][1][1]-20, line['label'],\
             ha='right', **line['label_args'])
 
 
@@ -471,7 +493,8 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         if type == 'stackplot':
             lines = [matplotlib.patches.Rectangle((0,0), 0,0, facecolor=pol.get_facecolor()[0]) for pol in lines]
         ax.legend(lines, labels, loc=legend, ncol=legend_cols, frameon=legend_border,\
-            labelspacing=labelspacing, handletextpad=handletextpad, prop={'size':legend_text_size})
+            labelspacing=labelspacing, handletextpad=handletextpad,\
+            prop={'size':legend_text_size + style['textsize_delta']})
             
     else:
         ax.legend_ = None  # TODO: hacky

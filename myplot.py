@@ -37,6 +37,7 @@ from matplotlib.colors import Normalize
 default_style = {
     'colors': ('b', 'g', 'r', 'c', 'm', 'y'),
     'linestyles': ('-', '--', '-.', ':'),
+    'markerstyles': ('o', 'v', '^', 'D', 's', '<', '>', 'h', '8'), # more available
     'hatchstyles': (None, '/', '\\', 'o', '*', '+', '//', '\\\\', '-', 'x', 'O', '.'),
     'textsize_delta': 0,
     'gridalpha':1.0,
@@ -67,7 +68,8 @@ tableau20 = [tableau20[i] for i in range(len(tableau20)) if i % 2 == 0]
 pretty_style = {
     'colors': tableau20,
     'linestyles': ('-', '--', '-.', ':'),
-    'hatchstyles': (None, '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
+    'markerstyles': ('o', 'v', '^', 'D', 's', '<', '>', 'h', '8'), # more available
+    'hatchstyles': (None, 'o', '*', '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
     'textsize_delta': 4,
     'gridalpha':0.3,
     'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
@@ -182,7 +184,8 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
          additional_ylabels=None, num_series_on_addl_y_axis=0,\
          axis_assignments=None, additional_ylims=None,\
          xlabel_size=20, ylabel_size=20, labelspacing=0.2, handletextpad=0.5,\
-         marker='o', linestyles=None, legend='best', show_legend=True,\
+         show_markers=True,\
+         markerstyles=None, linestyles=None, legend='best', show_legend=True,\
          legend_cols=1, linewidths=None, legend_border=False,\
          colors=None, axis=None, legend_text_size=20, filename=None,\
          xscale=None, yscale=None, type='series', bins=10, yerrs=None,\
@@ -287,6 +290,15 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         for i in range(len(linestyles)):
             if isinstance(linestyles[i], int):
                 linestyles[i] = style['linestyles'][linestyles[i]]
+    
+    if not markerstyles:
+        markerstyles = []
+        for i in range(len(ys)):
+            markerstyles.append(style['markerstyles'][i%len(style['markerstyles'])])
+    else:
+        for i in range(len(markerstyles)):
+            if isinstance(markerstyles[i], int):
+                markerstyles[i] = style['markerstyles'][markerstyles[i]]
 
     if not hatchstyles:
         hatchstyles = []
@@ -325,6 +337,8 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     if type == 'series':
         for i in range(len(ys)):
             if axis_assignments[i] != 0: continue
+
+            marker = markerstyles[i] if show_markers else None
 
 
             # TODO: simplify these two cases? repetitive.
@@ -467,7 +481,8 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         for i in range(len(ys)):
             # FIXME: index the correct addl y axis!
             if axis_assignments[i] != 1: continue
-            line, = addl_y_axes[0].plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
+            line, = addl_y_axes[0].plot(xs[i], ys[i], linestyle=linestyles[i],\
+                marker=markerstyles[i],\
                 color=colors[i], label=labels[i], **kwargs)
             lines[i] = line
             if yerrs:
@@ -575,7 +590,7 @@ def cdf(data, numbins=None, **kwargs):
         y, x = cdf_vals_from_data(d, numbins)
         xs.append(x)
         ys.append(y)
-    return plot(xs, ys, ylabel='CDF', marker=None, **kwargs)
+    return plot(xs, ys, ylabel='CDF', show_markers=False, **kwargs)
 
 def bar(xs, ys, xtick_label_rotation=45,\
     xtick_label_horizontal_alignment='right', **kwargs):

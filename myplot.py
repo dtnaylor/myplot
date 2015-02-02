@@ -37,6 +37,7 @@ from matplotlib.colors import Normalize
 default_style = {
     'colors': ('b', 'g', 'r', 'c', 'm', 'y'),
     'linestyles': ('-', '--', '-.', ':'),
+    'marker_edgecolor': 'black',
     'markerstyles': ('o', 'v', '^', 'D', 's', '<', '>', 'h', '8'), # more available
     'hatchstyles': (None, '/', '\\', 'o', '*', '+', '//', '\\\\', '-', 'x', 'O', '.'),
     'textsize_delta': 0,
@@ -69,13 +70,14 @@ pretty_style = {
     'colors': tableau20,
     'linestyles': ('-', '--', '-.', ':'),
     'markerstyles': ('o', 'v', '^', 'D', 's', '<', '>', 'h', '8'), # more available
+    'marker_edgecolor': 'white',
     'hatchstyles': (None, 'o', '*', '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
     'textsize_delta': 4,
     'gridalpha':0.3,
     'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
     'tick_marks':{'top':False, 'right':False, 'bottom':True, 'left':True},
     'bar_edgecolor':'white',
-    'errorbar_style':'line',  # fill
+    'errorbar_style':'line',  # 'line' or 'fill'
 }
     
 
@@ -180,33 +182,91 @@ def save_plot(filename):
 ##
 ## PLOT
 ##
-def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
-         additional_ylabels=None, num_series_on_addl_y_axis=0,\
-         axis_assignments=None, additional_ylims=None,\
-         xlabel_size=20, ylabel_size=20, labelspacing=0.2, handletextpad=0.5,\
-         show_markers=True,\
-         markerstyles=None, linestyles=None, legend='best', show_legend=True,\
-         legend_cols=1, linewidths=None, legend_border=False,\
-         colors=None, axis=None, legend_text_size=20, filename=None,\
-         xscale=None, yscale=None, type='series', bins=10, yerrs=None,\
-         additional_yscales=None, guide_lines=[],\
-         width_scale=1, height_scale=1, xlim=None, ylim=None,\
-         label_bars=False, bar_width=1, bar_group_padding=1,\
-         xticks=None, xtick_labels=None, xtick_label_rotation=0,\
-         xtick_label_horizontal_alignment='center',\
-         show_y_tick_labels=True, show_x_tick_labels=True,\
-         ticklabel_size=20,\
-         hatchstyles=None, stackbar_pattern_labels=None,\
-         stackbar_colors_denote='series',\
-         style=pretty_style, grid='both',\
-         fig=None, ax=None,\
+def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
+         type='series', filename=None, yerrs=None,
+
+         # STYLE
+         show_markers=True,
+         markerstyles=None,
+         linestyles=None, 
+         hatchstyles=None, 
+         linewidths=None, 
+         colors=None,           # array of color names, RGB tuples, or integers
+         grid='both',           # 'x', 'y', or 'both'
+         style=pretty_style,    # dict of style options
+         style_override={},     # override specific entries in style dict
+
+         # TICK MARKS
+         xticks=None,
+         xtick_labels=None,
+         xtick_label_rotation=0,
+         xtick_label_horizontal_alignment='center',
+         show_x_tick_labels=True,
+         show_y_tick_labels=True, 
+         
+         # LEGEND
+         legend_loc='best',         # location: 'best', 'upper right', etc.
+         show_legend=True,
+         legend_border=False,
+         legend_cols=1, 
+         labelspacing=0.2,      # vertical spacing between labels?
+         handletextpad=0.5,     # horizontal space b/w square and label?
+         
+         # TEXT SIZE
+         xlabel_size=20,
+         ylabel_size=20, 
+         ticklabel_size=20,
+         legend_text_size=20,
+
+         # SIZE & SCALES
+         width_scale=1,         # stretch width of plot
+         height_scale=1,        # stretch height of plot
+         xscale=None,           # 'linear', 'log', or 'symlog'  (None->'linear')
+         yscale=None,           # 'linear', 'log', or 'symlog'  (None->'linear')
+         xlim=None,             # (min, max)  min & max can be individually set to None for default
+         ylim=None,             # (min, max)  min & max can be individually set to None for default
+         # TODO : add min or max options
+
+         # OTHER
+         bins=10,               # number of bins for histogram
+         guide_lines=[],        # list of dicts specifying guide lines  # TODO example
+
+         # ADDITIONAL Y AXES
+         axis_assignments=None, # array; which Y axis should series i be plotted on?
+         additional_ylabels=None,
+         additional_ylims=None,
+         additional_yscales=None,
+
+         # BAR OPTIONS
+         label_bars=False,      # set to True to label bars with their Y value
+         bar_width=1,
+         bar_group_padding=1,   # horizontal padding b/w groups of bars
+         stackbar_pattern_labels=None,     # for a second legend
+         stackbar_colors_denote='series',  # 'series' or 'segments'
+
+         # PLOT OBJECTS
+         axis=None,             # ???
+         fig=None,              # pass in existing figure (e.g., for subplots)
+         ax=None,               # pass in existing axes (e.g., for subplots)
+
          **kwargs):
      # TODO: split series and hist into two different functions?
-     # TODO: change label font size back to 20
      # TODO: clean up multiple axis stuff 
-     # TODO: legend loc, replace 'bottom' with lower and 'top' with 'upper'
-     # TODO: what is the default labelspacing?
 
+
+    #################### CHECK INPUT ####################
+    for kw in ('legend',):  # deprecated keywords
+        if kw in kwargs:
+            print '[WARNING]  Deprecated keyword: %s' % kw
+    
+    if not hasattr(xs[0], '__iter__') or not hasattr(ys[0], '__iter__'):
+        print '[WARNING]  xs and ys should be arrays or arrays'
+
+    if len(xs) != len(ys):
+        print '[WARNING]  length of xs and ys do not match'
+
+
+    #################### PLOT OBJECTS ####################
     # if we want to do subplots, caller may have passed in an existing figure
     if not fig or not ax:
         fig, ax = plt.subplots()
@@ -225,8 +285,6 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         ax.set_ylim(axis[2:4])
     if xscale: ax.set_xscale(xscale)
     if yscale: ax.set_yscale(yscale)
-    if xlim: ax.set_xlim(xlim)
-    if ylim: ax.set_ylim(ylim)
     lines = [None]*len(ys)
     show_legend = show_legend and labels != None
     if not labels: labels = ['']*len(ys)
@@ -269,6 +327,9 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
 
 
     #################### STYLE ####################
+    for key, val in style_override.iteritems():
+        style[key] = val
+
     if not colors:
         colors = []
         if type=='stackbar' and stackbar_colors_denote=='segments':
@@ -344,10 +405,12 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
             # TODO: simplify these two cases? repetitive.
             if yerrs and style['errorbar_style'] == 'line':
                 line = ax.errorbar(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
+                    markeredgecolor=style['marker_edgecolor'],\
                     linewidth=linewidths[i], color=colors[i], label=labels[i],\
                     yerr=yerrs[i], **kwargs)
             else:
                 line, = ax.plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
+                    markeredgecolor=style['marker_edgecolor'],\
                     linewidth=linewidths[i], color=colors[i], label=labels[i], **kwargs)
 
             lines[i] = line
@@ -437,11 +500,22 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
     elif type == 'stackplot':
         lines = ax.stackplot(xs, ys)
         ax.set_xticks(np.arange(min(xs), max(xs)+1, 1.0))
+    
+    
+
+    #################### AXIS RANGES ####################
+    if xlim:
+        xmin = xlim[0] if xlim[0] is not None else ax.get_xlim()[0]
+        xmax = xlim[1] if xlim[1] is not None else ax.get_xlim()[1]
+        ax.set_xlim((xmin, xmax))
+    if ylim:
+        ymin = ylim[0] if ylim[0] is not None else ax.get_ylim()[0]
+        ymax = ylim[1] if ylim[1] is not None else ax.get_ylim()[1]
+        ax.set_ylim((ymin, ymax))
+
 
             
-    ##
-    ## X TICKS
-    ##
+    #################### X TICKS ####################
     if xticks:
         ax.set_xticks(xticks)
         if xtick_labels:
@@ -454,9 +528,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         ax.xaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter('%d'))
         #ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
     
-    ##
-    ## Y TICKS
-    ##
+    #################### Y TICKS ####################
     if yscale == 'log':
         #ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, pos: str(int(round(x)))))
         ax.yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter('%d'))
@@ -501,16 +573,18 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,\
         ax.add_line(matplotlib.lines.Line2D(line_xs, line_ys, zorder=1, **line['line_args']))
         ax.text(line['endpoints'][1][0]+1, line['endpoints'][1][1]-20, line['label'],\
             ha='right', **line['label_args'])
-
+    
+    
 
     #################### LEGEND ####################
+    legend_loc = legend_loc.replace('top', 'upper').replace('bottom', 'lower')
     if show_legend and labels: 
         if type == 'stackplot':
             lines = [matplotlib.patches.Rectangle((0,0), 0,0, facecolor=pol.get_facecolor()[0]) for pol in lines]
-        ax.legend(lines, labels, loc=legend, ncol=legend_cols, frameon=legend_border,\
-            labelspacing=labelspacing, handletextpad=handletextpad,\
+        ax.legend(lines, labels, loc=legend_loc, ncol=legend_cols,\
+            frameon=legend_border, labelspacing=labelspacing,\
+            handletextpad=handletextpad,\
             prop={'size':legend_text_size + style['textsize_delta']})
-            
     else:
         ax.legend_ = None  # TODO: hacky
 

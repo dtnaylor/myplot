@@ -46,6 +46,8 @@ default_style = {
     'tick_marks':{'top':True, 'right':True, 'bottom':True, 'left':True},
     'bar_edgecolor':'black',
     'errorbar_style':'line',
+    'transparent_bg':False,
+    'foreground_color':'black',
 }
 
 
@@ -63,11 +65,12 @@ for i in range(len(tableau20)):
     tableau20[i] = (r / 255., g / 255., b / 255.) 
 
 # remove every other color (light version)
-tableau20 = [tableau20[i] for i in range(len(tableau20)) if i % 2 == 0]
+tableau10light = [tableau20[i] for i in range(len(tableau20)) if i % 2 == 1]
+tableau10 = [tableau20[i] for i in range(len(tableau20)) if i % 2 == 0]
 
 
 pretty_style = {
-    'colors': tableau20,
+    'colors': tableau10,
     'linestyles': ('-', '--', '-.', ':'),
     'markerstyles': ('o', 'v', '^', 'D', 's', '<', '>', 'h', '8'), # more available
     'marker_edgecolor': 'white',
@@ -78,6 +81,30 @@ pretty_style = {
     'tick_marks':{'top':False, 'right':False, 'bottom':True, 'left':True},
     'bar_edgecolor':'white',
     'errorbar_style':'line',  # 'line' or 'fill'
+    'transparent_bg':False,
+    'foreground_color':'black',
+}
+
+# TODO: text delta 0, set override in mctls plots
+
+
+# re-arrange tableau10 light for dark bg (brighter colors first
+tableau10light2 = [tableau10light[i] for i in (1, 2, 3, 9, 6, 8, 0, 5, 7, 4)]
+
+dark_bg_style = {
+    'colors': tableau10light2,
+    'linestyles': ('-', '--', '-.', ':'),
+    'markerstyles': ('o', 'v', '^', 'D', 's', '<', '>', 'h', '8'), # more available
+    'marker_edgecolor': 'None',
+    'hatchstyles': (None, 'o', '*', '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
+    'textsize_delta': 4,
+    'gridalpha':0.5,
+    'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
+    'tick_marks':{'top':False, 'right':False, 'bottom':True, 'left':True},
+    'bar_edgecolor':'white',
+    'errorbar_style':'line',  # 'line' or 'fill'
+    'transparent_bg':True,
+    'foreground_color':'white',
 }
     
 
@@ -201,6 +228,8 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
          xtick_labels=None,
          xtick_label_rotation=0,
          xtick_label_horizontal_alignment='center',
+         xtick_frequency=1,  # 1=print every, 2=print every other, etc.
+         xtick_label_transform=lambda x: x,  # transform tick label text
          show_x_tick_labels=True,
          show_y_tick_labels=True, 
          
@@ -255,12 +284,12 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
 
     #################### CHECK INPUT ####################
-    for kw in ('legend',):  # deprecated keywords
+    for kw in ('legend', 'marker'):  # deprecated keywords
         if kw in kwargs:
             print '[WARNING]  Deprecated keyword: %s' % kw
     
     if not hasattr(xs[0], '__iter__') or not hasattr(ys[0], '__iter__'):
-        print '[WARNING]  xs and ys should be arrays or arrays'
+        print '[WARNING]  xs and ys should be arrays of arrays'
 
     if len(xs) != len(ys):
         print '[WARNING]  length of xs and ys do not match'
@@ -275,11 +304,13 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
 
     #################### SETUP ####################
-    if xlabel: ax.set_xlabel(xlabel, fontsize=xlabel_size + style['textsize_delta'])
-    if ylabel: ax.set_ylabel(ylabel, fontsize=ylabel_size + style['textsize_delta'])
+    if xlabel: ax.set_xlabel(xlabel, color=style['foreground_color'],\
+        fontsize=xlabel_size + style['textsize_delta'])
+    if ylabel: ax.set_ylabel(ylabel, color=style['foreground_color'],\
+        fontsize=ylabel_size + style['textsize_delta'])
     if not show_x_tick_labels: ax.set_xticklabels([])
     if not show_y_tick_labels: ax.set_yticklabels([])
-    if title: ax.set_title(title)
+    if title: ax.set_title(title, color=style['foreground_color'])
     if axis: 
         ax.set_xlim(axis[0:2])
         ax.set_ylim(axis[2:4])
@@ -377,14 +408,15 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     # frame lines
     for side, visible in style['frame_lines'].iteritems():
         ax.spines[side].set_visible(visible)
+        ax.spines[side].set_color(style['foreground_color'])
 
     # tick marks  (spacing and labels set below)
     ax.tick_params(labelsize=ticklabel_size + style['textsize_delta'],\
-        **style['tick_marks'])
+        color=style['foreground_color'], **style['tick_marks'])
     
     # show grid lines?
     if grid:
-        grid_args = {'zorder':0, 'alpha':style['gridalpha']}
+        grid_args = {'zorder':0, 'color':style['foreground_color'], 'alpha':style['gridalpha']}
         if grid == 'x':
             ax.xaxis.grid(**grid_args)
         elif grid == 'y':
@@ -410,7 +442,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                     yerr=yerrs[i], **kwargs)
             else:
                 line, = ax.plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
-                    markeredgecolor=style['marker_edgecolor'],\
+                    markeredgecolor=style['marker_edgecolor'], zorder=3,\
                     linewidth=linewidths[i], color=colors[i], label=labels[i], **kwargs)
 
             lines[i] = line
@@ -516,23 +548,45 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
             
     #################### X TICKS ####################
+    # xtick frequency (remove extra values if frequency != 1)
+    # TODO: minor xticks at frequency 1?
+    master_xticks = master_xticks[::xtick_frequency] if master_xticks != None else None
+    master_xnums = master_xnums[::xtick_frequency] if master_xnums != None else None
+    xticks = xticks[::xtick_frequency] if xticks != None else None
+    xtick_labels = xtick_labels[::xtick_frequency] if xtick_labels != None else None
+
+    # transform label text
+    if master_xticks != None:
+        master_xticks = [xtick_label_transform(l) for l in master_xticks]
+    if xtick_labels != None:
+        xtick_labels = [xtick_label_transform(l) for l in xtick_labels]
+
     if xticks:
         ax.set_xticks(xticks)
         if xtick_labels:
-            ax.set_xticklabels(xtick_labels, horizontalalignment='right', rotation=xtick_label_rotation)
+            ax.set_xticklabels(xtick_labels, color=style['foreground_color'],\
+                horizontalalignment=xtick_label_horizontal_alignment,\
+                rotation=xtick_label_rotation)
     elif master_xticks:
         ax.set_xticks(master_xnums)
-        ax.set_xticklabels(master_xticks, horizontalalignment='right', rotation=xtick_label_rotation)
+        ax.set_xticklabels(master_xticks, color=style['foreground_color'],\
+            horizontalalignment=xtick_label_horizontal_alignment,\
+             rotation=xtick_label_rotation)
     if xscale == 'log':
         #ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, pos: str(int(round(x)))))
         ax.xaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter('%d'))
         #ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    for tl in ax.get_xticklabels():
+        tl.set_color(style['foreground_color'])
+
     
     #################### Y TICKS ####################
     if yscale == 'log':
         #ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, pos: str(int(round(x)))))
         ax.yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter('%d'))
         #ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    for tl in ax.get_yticklabels():
+        tl.set_color(style['foreground_color'])
 
 
     #################### ADDITONAL Y AXES ####################
@@ -593,7 +647,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     plt.tight_layout()
 
     if filename:
-        plt.savefig(filename)
+        plt.savefig(filename, transparent=style['transparent_bg'])
     #plt.show()
 
     return lines, labels  # making an overall figure legend

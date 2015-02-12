@@ -225,7 +225,8 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
          # TICK MARKS
          xticks=None,
-         xtick_labels=None,
+         xtick_labels=None,     # ???
+         master_xticks=None,    # sorted list of all xtick labels (across all series)
          xtick_label_rotation=0,
          xtick_label_horizontal_alignment='center',
          xtick_frequency=1,  # 1=print every, 2=print every other, etc.
@@ -335,17 +336,17 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     # pass the master list in case they're not sortable.
     # NOTE: for now, this assumes that either all series have numeric X axes or
     # none do.
-    master_xticks = None
     master_xnums = None
     if type not in ('stackplot', 'bar', 'stackbar'):
         try:
             float(xs[0][0])
         except ValueError:
             # make & sort list of all X tick labels used by any series
-            master_xticks = set()
-            for i in range(len(xs)):
-                master_xticks |= set(xs[i])
-            master_xticks = sorted(list(master_xticks))
+            if not master_xticks:  # caller might have passed in master list
+                master_xticks = set()
+                for i in range(len(xs)):
+                    master_xticks |= set(xs[i])
+                master_xticks = sorted(list(master_xticks))
             master_xnums = np.arange(len(master_xticks))
 
             # replace each old string with its index in master_xticks

@@ -332,8 +332,6 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     # If X axis points are strings, make a dummy x array for each string x list.
     # not each series might have a data point for each X value, so we need to 
     # make a "master" xtick label list with all of the X values in right order
-    # FIXME: for now, assuming they're sortable. should add option for caller to
-    # pass the master list in case they're not sortable.
     # NOTE: for now, this assumes that either all series have numeric X axes or
     # none do.
     master_xnums = None

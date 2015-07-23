@@ -23,7 +23,9 @@ matplotlib.rcParams['ps.fonttype'] = 42
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker
+import os
 import numpy
+import textwrap
 from scipy.stats import cumfreq
 from matplotlib.colors import Normalize
 
@@ -48,6 +50,9 @@ default_style = {
     'errorbar_style':'line',
     'transparent_bg':False,
     'foreground_color':'black',
+    'ylabel_rotation':'vertical',
+    'ylabel_textwrap_width': 80,
+    'ylabel_pad': 0,  # TODO: check this
 }
 
 
@@ -83,6 +88,9 @@ pretty_style = {
     'errorbar_style':'line',  # 'line' or 'fill'
     'transparent_bg':False,
     'foreground_color':'black',
+    'ylabel_rotation':'vertical',
+    'ylabel_textwrap_width': 80,
+    'ylabel_pad': 0,  # TODO: check this
 }
 
 # TODO: text delta 0, set override in mctls plots
@@ -105,6 +113,37 @@ dark_bg_style = {
     'errorbar_style':'line',  # 'line' or 'fill'
     'transparent_bg':True,
     'foreground_color':'white',
+    'ylabel_rotation':'vertical',
+    'ylabel_textwrap_width': 80,
+    'ylabel_pad': 0,
+}
+
+slide_style = {
+    'colors': tableau10,
+    'linestyles': ('-', '--', '-.', ':'),
+    'markerstyles': ('o', 'v', '^', 'D', 's', '<', '>', 'h', '8'), # more available
+    'marker_edgecolor': 'white',
+    'hatchstyles': (None, 'o', '*', '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
+    'textsize_delta': 4,
+    'gridalpha':0.3,
+    'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
+    'tick_marks':{'top':False, 'right':False, 'bottom':True, 'left':True},
+    'bar_edgecolor':'white',
+    'errorbar_style':'line',  # 'line' or 'fill'
+    'transparent_bg':False,
+    'foreground_color':'black',
+    'ylabel_rotation':'horizontal',
+    'ylabel_textwrap_width': 8,
+    'ylabel_pad': 50,
+
+    # overriede kw args to plot function
+    'arg_override': {
+        'legend_loc': 'out right',
+        #'legend_cols': 5,
+        'labelspacing': 0.3,
+        'guide_lines': [],  # TODO remove?
+        'ylim': (0, None),
+    },
 }
     
 
@@ -209,7 +248,21 @@ def save_plot(filename):
 ##
 ## PLOT
 ##
-def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
+def plot(xs, ys, filename='figure.pdf', builds=[], style=slide_style, **kwargs):
+    if 'arg_override' in style:
+        for key, val in style['arg_override'].iteritems():
+            kwargs[key] = val
+
+    # save one copy of the fig for each "build" (set of series); e.g., for slides
+    for build in builds:
+        skip_series = [i for i in range(len(xs)) if i not in build]
+        root, ext = os.path.splitext(filename)
+        build_filename = '%s%s%s' % (root, build, ext)
+        _plot(xs, ys, skip_series=skip_series, filename=build_filename, **kwargs)
+
+    return _plot(xs, ys, filename=filename, **kwargs)
+
+def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
          type='series', filename=None, yerrs=None,
 
          # STYLE
@@ -225,8 +278,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
          # TICK MARKS
          xticks=None,
-         xtick_labels=None,     # ???
-         master_xticks=None,    # sorted list of all xtick labels (across all series)
+         xtick_labels=None,
          xtick_label_rotation=0,
          xtick_label_horizontal_alignment='center',
          xtick_frequency=1,  # 1=print every, 2=print every other, etc.
@@ -260,6 +312,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
          # OTHER
          bins=10,               # number of bins for histogram
          guide_lines=[],        # list of dicts specifying guide lines  # TODO example
+         skip_series=[],        # list of series nums to skip (e.g., to make multi-stage builds)
 
          # ADDITIONAL Y AXES
          axis_assignments=None, # array; which Y axis should series i be plotted on?
@@ -284,6 +337,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
      # TODO: clean up multiple axis stuff 
 
 
+
     #################### CHECK INPUT ####################
     for kw in ('legend', 'marker'):  # deprecated keywords
         if kw in kwargs:
@@ -294,6 +348,10 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
     if len(xs) != len(ys):
         print '[WARNING]  length of xs and ys do not match'
+    
+
+    for key, val in style_override.iteritems():
+        style[key] = val
 
 
     #################### PLOT OBJECTS ####################
@@ -307,8 +365,11 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     #################### SETUP ####################
     if xlabel: ax.set_xlabel(xlabel, color=style['foreground_color'],\
         fontsize=xlabel_size + style['textsize_delta'])
-    if ylabel: ax.set_ylabel(ylabel, color=style['foreground_color'],\
-        fontsize=ylabel_size + style['textsize_delta'])
+    if ylabel: ax.set_ylabel(textwrap.fill(ylabel, style['ylabel_textwrap_width']),\
+        color=style['foreground_color'],\
+        fontsize=ylabel_size + style['textsize_delta'],\
+        va='center', labelpad=style['ylabel_pad'],\
+        rotation=style['ylabel_rotation'])
     if not show_x_tick_labels: ax.set_xticklabels([])
     if not show_y_tick_labels: ax.set_yticklabels([])
     if title: ax.set_title(title, color=style['foreground_color'])
@@ -332,19 +393,21 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     # If X axis points are strings, make a dummy x array for each string x list.
     # not each series might have a data point for each X value, so we need to 
     # make a "master" xtick label list with all of the X values in right order
+    # FIXME: for now, assuming they're sortable. should add option for caller to
+    # pass the master list in case they're not sortable.
     # NOTE: for now, this assumes that either all series have numeric X axes or
     # none do.
+    master_xticks = None
     master_xnums = None
     if type not in ('stackplot', 'bar', 'stackbar'):
         try:
             float(xs[0][0])
         except ValueError:
             # make & sort list of all X tick labels used by any series
-            if not master_xticks:  # caller might have passed in master list
-                master_xticks = set()
-                for i in range(len(xs)):
-                    master_xticks |= set(xs[i])
-                master_xticks = sorted(list(master_xticks))
+            master_xticks = set()
+            for i in range(len(xs)):
+                master_xticks |= set(xs[i])
+            master_xticks = sorted(list(master_xticks))
             master_xnums = np.arange(len(master_xticks))
 
             # replace each old string with its index in master_xticks
@@ -357,8 +420,6 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
 
     #################### STYLE ####################
-    for key, val in style_override.iteritems():
-        style[key] = val
 
     if not colors:
         colors = []
@@ -431,6 +492,7 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
             if axis_assignments[i] != 0: continue
 
             marker = markerstyles[i] if show_markers else None
+            alpha = 0 if i in skip_series else 1
 
 
             # TODO: simplify these two cases? repetitive.
@@ -438,10 +500,12 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                 line = ax.errorbar(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
                     markeredgecolor=style['marker_edgecolor'],\
                     linewidth=linewidths[i], color=colors[i], label=labels[i],\
+                    alpha=alpha,\
                     yerr=yerrs[i], **kwargs)
             else:
                 line, = ax.plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
                     markeredgecolor=style['marker_edgecolor'], zorder=3,\
+                    alpha=alpha,\
                     linewidth=linewidths[i], color=colors[i], label=labels[i], **kwargs)
 
             lines[i] = line
@@ -631,10 +695,21 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
     #################### LEGEND ####################
     legend_loc = legend_loc.replace('top', 'upper').replace('bottom', 'lower')
+    bbox_to_anchor = None
     if show_legend and labels: 
         if type == 'stackplot':
             lines = [matplotlib.patches.Rectangle((0,0), 0,0, facecolor=pol.get_facecolor()[0]) for pol in lines]
+
+        # not real keywords; manually put legend outside plot
+        if legend_loc == 'below':  
+            bbox_to_anchor=(0.5, -0.30)  #, 1., .102)
+            legend_loc='upper center'
+        elif legend_loc == 'out right':
+            bbox_to_anchor=(1.03, 1.0)
+            legend_loc='upper left'
+
         ax.legend(lines, labels, loc=legend_loc, ncol=legend_cols,\
+            bbox_to_anchor=bbox_to_anchor,\
             frameon=legend_border, labelspacing=labelspacing,\
             handletextpad=handletextpad,\
             prop={'size':legend_text_size + style['textsize_delta']})
@@ -642,11 +717,12 @@ def plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         ax.legend_ = None  # TODO: hacky
 
 
+
     # make sure no text is clipped along the boundaries
-    plt.tight_layout()
+    #plt.tight_layout()
 
     if filename:
-        plt.savefig(filename, transparent=style['transparent_bg'])
+        plt.savefig(filename, transparent=style['transparent_bg'], bbox_extra_artists=(ax.legend_,), bbox_inches='tight')
     #plt.show()
 
     return lines, labels  # making an overall figure legend

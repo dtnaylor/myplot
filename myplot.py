@@ -258,9 +258,10 @@ def plot(xs, ys, filename='figure.pdf', builds=[], style=slide_style, **kwargs):
         skip_series = [i for i in range(len(xs)) if i not in build]
         root, ext = os.path.splitext(filename)
         build_filename = '%s%s%s' % (root, build, ext)
-        _plot(xs, ys, skip_series=skip_series, filename=build_filename, **kwargs)
+        _plot(xs, ys, skip_series=skip_series, style=style,\
+            filename=build_filename, **kwargs)
 
-    return _plot(xs, ys, filename=filename, **kwargs)
+    return _plot(xs, ys, style=style, filename=filename, **kwargs)
 
 def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
          type='series', filename=None, yerrs=None,
@@ -533,11 +534,13 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
         color_squares = []
         for i in range(len(ys)):
-
+            
             if type == 'bar':
+                alpha = 0 if i in skip_series else 1
                 yerr=yerrs[i] if yerrs else None
                 rects = ax.bar(ind + i*bar_width, ys[i], bar_width, log=log,\
                     yerr=yerr, error_kw={'zorder':4, 'ecolor':'black'},
+                    alpha=alpha,\
                     color=colors[i], edgecolor=style['bar_edgecolor'], zorder=3)
                 color_squares.append(rects[0])
                 if label_bars: autolabel(rects, ax)

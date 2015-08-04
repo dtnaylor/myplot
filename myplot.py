@@ -113,9 +113,9 @@ dark_bg_style = {
     'errorbar_style':'line',  # 'line' or 'fill'
     'transparent_bg':True,
     'foreground_color':'white',
-    'ylabel_rotation':'vertical',
+    'ylabel_rotation':'horizontal',
     'ylabel_textwrap_width': 80,
-    'ylabel_pad': 0,
+    'ylabel_pad': 70,
 }
 
 slide_style = {
@@ -724,8 +724,10 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     # make sure no text is clipped along the boundaries
     #plt.tight_layout()
 
+    extra_artists = (ax.legend_,) if ax.legend_ else []
+
     if filename:
-        plt.savefig(filename, transparent=style['transparent_bg'], bbox_extra_artists=(ax.legend_,), bbox_inches='tight')
+        plt.savefig(filename, transparent=style['transparent_bg'], bbox_extra_artists=extra_artists, bbox_inches='tight')
     #plt.show()
 
     return lines, labels  # making an overall figure legend

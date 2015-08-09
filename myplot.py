@@ -90,7 +90,7 @@ pretty_style = {
     'foreground_color':'black',
     'ylabel_rotation':'vertical',
     'ylabel_textwrap_width': 80,
-    'ylabel_pad': 0,  # TODO: check this
+    'ylabel_pad': 20,  # TODO: check this
 }
 
 # TODO: text delta 0, set override in mctls plots
@@ -248,7 +248,7 @@ def save_plot(filename):
 ##
 ## PLOT
 ##
-def plot(xs, ys, filename='figure.pdf', builds=[], style=slide_style, **kwargs):
+def plot(xs, ys, filename='figure.pdf', builds=[], style=pretty_style, **kwargs):
     if 'arg_override' in style:
         for key, val in style['arg_override'].iteritems():
             kwargs[key] = val
@@ -286,6 +286,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
          xtick_label_transform=lambda x: x,  # transform tick label text
          show_x_tick_labels=True,
          show_y_tick_labels=True, 
+         master_xticks=None,
          
          # LEGEND
          legend_loc='best',         # location: 'best', 'upper right', etc.
@@ -394,21 +395,20 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     # If X axis points are strings, make a dummy x array for each string x list.
     # not each series might have a data point for each X value, so we need to 
     # make a "master" xtick label list with all of the X values in right order
-    # FIXME: for now, assuming they're sortable. should add option for caller to
-    # pass the master list in case they're not sortable.
     # NOTE: for now, this assumes that either all series have numeric X axes or
     # none do.
-    master_xticks = None
     master_xnums = None
     if type not in ('stackplot', 'bar', 'stackbar'):
         try:
             float(xs[0][0])
         except ValueError:
+            # if user didn't pass in a sorted list of xtick labels,
             # make & sort list of all X tick labels used by any series
-            master_xticks = set()
-            for i in range(len(xs)):
-                master_xticks |= set(xs[i])
-            master_xticks = sorted(list(master_xticks))
+            if master_xticks == None:
+                master_xticks = set()
+                for i in range(len(xs)):
+                    master_xticks |= set(xs[i])
+                master_xticks = sorted(list(master_xticks))
             master_xnums = np.arange(len(master_xticks))
 
             # replace each old string with its index in master_xticks

@@ -153,7 +153,7 @@ slide_style = {
 ##
 ## HELPER FUNCTIONS
 ##
-def cdf_vals_from_data(data, numbins=None):
+def cdf_vals_from_data(data, numbins=None, maxbins=None):
 
     # make sure data is a numpy array
     data = numpy.array(data)
@@ -161,6 +161,9 @@ def cdf_vals_from_data(data, numbins=None):
     # by default, use numbins equal to number of distinct values
     if numbins == None:
         numbins = numpy.unique(data).size
+
+    if maxbins != None and numbins > maxbins:
+        numbins = maxbins
     
     # bin the data and count each bin
     result = cumfreq(data, numbins, (data.min(), data.max()))
@@ -174,9 +177,9 @@ def cdf_vals_from_data(data, numbins=None):
     # make array of x-vals (lower end of each bin)
     x_vals = numpy.linspace(min_bin_val, min_bin_val+bin_size*numbins, numbins)
 
-    # CDF always starts at (0, 0)
-    cum_bin_counts = numpy.insert(cum_bin_counts, 0, 0)
-    x_vals = numpy.insert(x_vals, 0, 0)
+    # CDF always starts at y=0
+    cum_bin_counts = numpy.insert(cum_bin_counts, 0, 0)  # y = 0
+    x_vals = numpy.insert(x_vals, 0, x_vals[0])  # x = min x
 
 
     return cum_bin_counts, x_vals

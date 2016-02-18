@@ -283,6 +283,10 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
          style=pretty_style,    # dict of style options
          style_override={},     # override specific entries in style dict
 
+         # DATA TRANSFORMATIONS
+         xval_transform=lambda x: x,  # transform x values (e.g., divide by 1000)
+         yval_transform=lambda y: y,  # transform y values (e.g., divide by 1000)
+
          # TICK MARKS
          xticks=None,
          xtick_labels=None,
@@ -360,6 +364,14 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
     for key, val in style_override.iteritems():
         style[key] = val
+    
+    
+    #################### TRANSFORM DATA ####################
+    for i in range(len(xs)):
+        xs[i] = numpy.vectorize(xval_transform)(xs[i])
+
+    for i in range(len(ys)):
+        ys[i] = numpy.vectorize(yval_transform)(ys[i])
 
 
     #################### PLOT OBJECTS ####################

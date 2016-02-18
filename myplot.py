@@ -25,8 +25,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker
 import os
 import numpy
+from scipy import stats
 import textwrap
-from scipy.stats import cumfreq
 from matplotlib.colors import Normalize
 
 #plt.xkcd()
@@ -159,30 +159,33 @@ def cdf_vals_from_data(data, numbins=None, maxbins=None):
     data = numpy.array(data)
     
     # by default, use numbins equal to number of distinct values
+    # TODO: shouldn't this be one per possible x val?
     if numbins == None:
         numbins = numpy.unique(data).size
 
     if maxbins != None and numbins > maxbins:
         numbins = maxbins
     
-    # bin the data and count each bin
-    result = cumfreq(data, numbins, (data.min(), data.max()))
-    cum_bin_counts = result[0]
-    min_bin_val = result[1]
-    bin_size = result[2]
+    # bin the data and count fraction of points in each bin (for PDF)
+    rel_bin_counts, min_bin_x, bin_size, _ =\
+        stats.relfreq(data, numbins, (data.min(), data.max()))
+    
+    # bin the data and count each bin (cumulatively) (for CDF)
+    cum_bin_counts, min_bin_x, bin_size, _ =\
+        stats.cumfreq(data, numbins, (data.min(), data.max()))
 
     # normalize bin counts so rightmost count is 1
     cum_bin_counts /= cum_bin_counts.max()
 
     # make array of x-vals (lower end of each bin)
-    x_vals = numpy.linspace(min_bin_val, min_bin_val+bin_size*numbins, numbins)
+    x_vals = numpy.linspace(min_bin_x, min_bin_x+bin_size*numbins, numbins)
 
     # CDF always starts at y=0
     cum_bin_counts = numpy.insert(cum_bin_counts, 0, 0)  # y = 0
-    x_vals = numpy.insert(x_vals, 0, x_vals[0])  # x = min x
+    cdf_x_vals = numpy.insert(x_vals, 0, x_vals[0])  # x = min x
 
 
-    return cum_bin_counts, x_vals
+    return cum_bin_counts, cdf_x_vals, rel_bin_counts, x_vals
 
 def endpoints_for_stretched_line(endpoints, xlim, ylim):
     e1, e2 = endpoints
@@ -793,15 +796,33 @@ def heatmap(matrix, colorbar=True, colorbar_label=None, color_map=plt.cm.Blues,\
         plt.savefig(filename)
 
 
-def cdf(data, numbins=None, **kwargs):
-    '''Wrapper for making CDFs'''
+def cdf(data, numbins=None, pdf=False, labels=None, **kwargs):
+    '''Wrapper for making CDFs (and PDFs)'''
     xs = []
     ys = []
     for d in data:
-        y, x = cdf_vals_from_data(d, numbins)
-        xs.append(x)
-        ys.append(y)
-    return plot(xs, ys, ylabel='CDF', show_markers=False, **kwargs)
+        cdf_y, cdf_x, pdf_y, pdf_x = cdf_vals_from_data(d, numbins)
+
+        xs.append(cdf_x)
+        ys.append(cdf_y)
+
+        if pdf:
+            xs.append(pdf_x)
+            ys.append(pdf_y)
+
+    if pdf:
+        if labels:
+            # need to duplicate each label and add (CDF) or (PDF)
+            new_labels = []
+            for label in labels:
+                new_labels += ['%s (CDF)' % label, '%s (PDF)' % label]
+            labels = new_labels
+        else:
+            # just label each line CDF or PDF
+            labels = ['CDF', 'PDF'] * len(data)
+
+
+    return plot(xs, ys, labels=labels, ylabel='Probability', show_markers=False, **kwargs)
 
 def bar(xs, ys, xtick_label_rotation=45,\
     xtick_label_horizontal_alignment='right', **kwargs):

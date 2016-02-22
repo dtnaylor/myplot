@@ -808,21 +808,22 @@ def heatmap(matrix, colorbar=True, colorbar_label=None, color_map=plt.cm.Blues,\
         plt.savefig(filename)
 
 
-def cdf(data, numbins=None, pdf=False, labels=None, **kwargs):
-    '''Wrapper for making CDFs (and PDFs)'''
+def distribution(data, numbins=None, pdf=False, cdf=True, labels=None, **kwargs):
+    '''Wrapper for making CDFs and PDFs'''
     xs = []
     ys = []
     for d in data:
         cdf_y, cdf_x, pdf_y, pdf_x = cdf_vals_from_data(d, numbins)
 
-        xs.append(cdf_x)
-        ys.append(cdf_y)
+        if cdf:
+            xs.append(cdf_x)
+            ys.append(cdf_y)
 
         if pdf:
             xs.append(pdf_x)
             ys.append(pdf_y)
 
-    if pdf:
+    if pdf and cdf:
         if labels:
             # need to duplicate each label and add (CDF) or (PDF)
             new_labels = []
@@ -835,6 +836,14 @@ def cdf(data, numbins=None, pdf=False, labels=None, **kwargs):
 
 
     return plot(xs, ys, labels=labels, ylabel='Probability', show_markers=False, **kwargs)
+
+def cdf(data, pdf=False, **kwargs):
+    '''Wrapper for making CDFs'''
+    return distribution(data, cdf=True, pdf=pdf, **kwargs)
+
+def pdf(data, cdf=False, **kwargs):
+    '''Wrapper for making PDFs'''
+    return distribution(data, pdf=True, cdf=cdf, **kwargs)
 
 def bar(xs, ys, xtick_label_rotation=45,\
     xtick_label_horizontal_alignment='right', **kwargs):

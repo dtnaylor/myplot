@@ -297,6 +297,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
          show_x_tick_labels=True,
          show_y_tick_labels=True, 
          master_xticks=None,
+         power_limits=(-3, 4),  # scientific notation for nums smaller than 10^-3 or bigger than 10^4
          
          # LEGEND
          legend_loc='best',         # location: 'best', 'upper right', etc.
@@ -398,6 +399,10 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         ax.set_ylim(axis[2:4])
     if xscale: ax.set_xscale(xscale)
     if yscale: ax.set_yscale(yscale)
+    if isinstance(ax.xaxis.get_major_formatter(), matplotlib.ticker.ScalarFormatter):
+        ax.xaxis.get_major_formatter().set_powerlimits(power_limits)
+    if isinstance(ax.yaxis.get_major_formatter(), matplotlib.ticker.ScalarFormatter):
+        ax.yaxis.get_major_formatter().set_powerlimits(power_limits)
     lines = [None]*len(ys)
     show_legend = show_legend and labels != None
     if not labels: labels = ['']*len(ys)
@@ -748,6 +753,8 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         plt.savefig(filename, transparent=style['transparent_bg'], bbox_extra_artists=extra_artists, bbox_inches='tight')
     #plt.show()
 
+    plt.close()  # to save memory
+
     return lines, labels  # making an overall figure legend
 
 
@@ -808,22 +815,21 @@ def heatmap(matrix, colorbar=True, colorbar_label=None, color_map=plt.cm.Blues,\
         plt.savefig(filename)
 
 
-def distribution(data, numbins=None, pdf=False, cdf=True, labels=None, **kwargs):
-    '''Wrapper for making CDFs and PDFs'''
+def cdf(data, numbins=None, pdf=False, labels=None, **kwargs):
+    '''Wrapper for making CDFs (and PDFs)'''
     xs = []
     ys = []
     for d in data:
         cdf_y, cdf_x, pdf_y, pdf_x = cdf_vals_from_data(d, numbins)
 
-        if cdf:
-            xs.append(cdf_x)
-            ys.append(cdf_y)
+        xs.append(cdf_x)
+        ys.append(cdf_y)
 
         if pdf:
             xs.append(pdf_x)
             ys.append(pdf_y)
 
-    if pdf and cdf:
+    if pdf:
         if labels:
             # need to duplicate each label and add (CDF) or (PDF)
             new_labels = []
@@ -836,14 +842,6 @@ def distribution(data, numbins=None, pdf=False, cdf=True, labels=None, **kwargs)
 
 
     return plot(xs, ys, labels=labels, ylabel='Probability', show_markers=False, **kwargs)
-
-def cdf(data, pdf=False, **kwargs):
-    '''Wrapper for making CDFs'''
-    return distribution(data, cdf=True, pdf=pdf, **kwargs)
-
-def pdf(data, cdf=False, **kwargs):
-    '''Wrapper for making PDFs'''
-    return distribution(data, pdf=True, cdf=cdf, **kwargs)
 
 def bar(xs, ys, xtick_label_rotation=45,\
     xtick_label_horizontal_alignment='right', **kwargs):

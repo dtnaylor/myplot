@@ -610,7 +610,9 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                     
 
         ax.set_xticks(ind + num_series/2.0*bar_width)
-        ax.set_xticklabels(xs[0], horizontalalignment=xtick_label_horizontal_alignment,\
+        if xtick_labels == None:
+            xtick_labels = xs[0]
+        ax.set_xticklabels(xtick_labels, horizontalalignment=xtick_label_horizontal_alignment,\
             rotation=xtick_label_rotation)
         ax.set_xlim(0, ind[-1]+group_width+bar_group_padding/2.0)
 
@@ -714,8 +716,9 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
         (line_xs, line_ys) = zip(*line['endpoints'])
         ax.add_line(matplotlib.lines.Line2D(line_xs, line_ys, zorder=1, **line['line_args']))
-        ax.text(line['endpoints'][1][0]+1, line['endpoints'][1][1]-20, line['label'],\
-            ha='right', **line['label_args'])
+        if 'label' in line:
+            ax.text(line['endpoints'][1][0]+1, line['endpoints'][1][1]-20, line['label'],\
+                ha='right', **line['label_args'])
     
     
 
@@ -815,21 +818,22 @@ def heatmap(matrix, colorbar=True, colorbar_label=None, color_map=plt.cm.Blues,\
         plt.savefig(filename)
 
 
-def cdf(data, numbins=None, pdf=False, labels=None, **kwargs):
+def distribution_function(data, numbins=None, cdf=False, pdf=False, bars=False, labels=None, **kwargs):
     '''Wrapper for making CDFs (and PDFs)'''
     xs = []
     ys = []
     for d in data:
         cdf_y, cdf_x, pdf_y, pdf_x = cdf_vals_from_data(d, numbins)
 
-        xs.append(cdf_x)
-        ys.append(cdf_y)
+        if cdf:
+            xs.append(cdf_x)
+            ys.append(cdf_y)
 
         if pdf:
             xs.append(pdf_x)
             ys.append(pdf_y)
 
-    if pdf:
+    if cdf and pdf:
         if labels:
             # need to duplicate each label and add (CDF) or (PDF)
             new_labels = []
@@ -840,8 +844,17 @@ def cdf(data, numbins=None, pdf=False, labels=None, **kwargs):
             # just label each line CDF or PDF
             labels = ['CDF', 'PDF'] * len(data)
 
+    if bars:
+        return bar(xs, ys, labels=labels, show_markers=False, **kwargs)
+    else:
+        return plot(xs, ys, labels=labels, show_markers=False, **kwargs)
 
-    return plot(xs, ys, labels=labels, ylabel='Probability', show_markers=False, **kwargs)
+
+def pdf(data, numbins=None, labels=None, **kwargs):
+    return distribution_function(data, numbins=numbins, labels=labels, pdf=True, **kwargs)
+
+def cdf(data, numbins=None, labels=None, **kwargs):
+    return distribution_function(data, numbins=numbins, labels=labels, cdf=True, ylabel='CDF', **kwargs)
 
 def bar(xs, ys, xtick_label_rotation=45,\
     xtick_label_horizontal_alignment='right', **kwargs):

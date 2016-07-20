@@ -191,24 +191,49 @@ def endpoints_for_stretched_line(endpoints, xlim, ylim):
     e1, e2 = endpoints
     xmin, xmax = xlim
     ymin, ymax = ylim
-    m = float(e2[1]-e1[1])/float(e2[0]-e1[0])  # slope
 
-    y_for_xmin = m*(xmin-e1[0]) + e1[1]
-    x_for_ymin = ((ymin-e1[1])/m if m != 0 else 0) + e1[0]
-    y_for_xmax = m*(xmax-e1[0]) + e1[1]
-    x_for_ymax = ((ymax-e1[1])/m if m != 0 else 0) + e1[0]
-
-    if y_for_xmin < ymin:
-        new_e1 = (x_for_ymin, ymin)
+    if e1[0] == e2[0]:  #vertical line
+        return ((e1[0], ymin), (e1[0], ymax))
     else:
-        new_e1 = (xmin, y_for_xmin)
+        m = float(e2[1]-e1[1])/float(e2[0]-e1[0])  # slope
 
-    if y_for_xmax > ymax:
-        new_e2 = (x_for_ymax, ymax)
-    else:
-        new_e2 = (xmax, y_for_xmax)
+        y_for_xmin = m*(xmin-e1[0]) + e1[1]
+        x_for_ymin = ((ymin-e1[1])/m if m != 0 else 0) + e1[0]
+        y_for_xmax = m*(xmax-e1[0]) + e1[1]
+        x_for_ymax = ((ymax-e1[1])/m if m != 0 else 0) + e1[0]
 
-    return (new_e1, new_e2)
+        if y_for_xmin < ymin:
+            new_e1 = (x_for_ymin, ymin)
+        else:
+            new_e1 = (xmin, y_for_xmin)
+
+        if y_for_xmax > ymax:
+            new_e2 = (x_for_ymax, ymax)
+        else:
+            new_e2 = (xmax, y_for_xmax)
+
+        return (new_e1, new_e2)
+
+def new_line(endpoints, line_width=1, color='gray', alpha=0.7, label=None,\
+        stretch=True):
+    return {
+        'endpoints':((endpoints[0][0], endpoints[0][1]),
+                     (endpoints[1][0], endpoints[1][1])),
+        'stretch':stretch,
+        'line_args':{
+            'linewidth':line_width,
+            'color':color,
+            'alpha':alpha,
+        },
+
+        'label':label,
+        'label_args':{
+            'color':'gray',
+            'alpha':0.7,
+            'size':'small',
+        },
+    }
+
 
 def autolabel(rects, ax):
     # attach some text labels
@@ -465,7 +490,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     else:
         for i in range(len(linestyles)):
             if isinstance(linestyles[i], int):
-                linestyles[i] = style['linestyles'][linestyles[i]]
+                linestyles[i] = style['linestyles'][linestyles[i]%len(style['linestyles'])]
     
     if not markerstyles:
         markerstyles = []
@@ -716,7 +741,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
         (line_xs, line_ys) = zip(*line['endpoints'])
         ax.add_line(matplotlib.lines.Line2D(line_xs, line_ys, zorder=1, **line['line_args']))
-        if 'label' in line:
+        if 'label' in line and line['label'] != None:
             ax.text(line['endpoints'][1][0]+1, line['endpoints'][1][1]-20, line['label'],\
                 ha='right', **line['label_args'])
     

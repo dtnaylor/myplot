@@ -234,6 +234,15 @@ def new_line(endpoints, line_width=1, color='gray', alpha=0.7, label=None,\
         },
     }
 
+def confidence_interval_mean(values, degree=0.95):
+    return stats.t.interval(0.95, len(values)-1, loc=np.mean(values),\
+            scale=stats.sem(values))
+
+def yerr_for_confidence_interval_mean(values, degree=0.95):
+    ci = confidence_interval_mean(values, degree)
+    mean = numpy.mean(values)
+    return ci[1] - mean
+
 
 def autolabel(rects, ax):
     # attach some text labels
@@ -723,8 +732,9 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         for i in range(len(ys)):
             # FIXME: index the correct addl y axis!
             if axis_assignments[i] != 1: continue
+            marker = markerstyles[i] if show_markers else None
             line, = addl_y_axes[0].plot(xs[i], ys[i], linestyle=linestyles[i],\
-                marker=markerstyles[i],\
+                marker=marker,\
                 color=colors[i], label=labels[i], **kwargs)
             lines[i] = line
             if yerrs:

@@ -440,7 +440,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     lines = [None]*len(ys)
     show_legend = show_legend and labels != None
     if not labels: labels = ['']*len(ys)
-    if not linewidths: linewidths = [3]*len(ys)
+    if not linewidths: linewidths = [4]*len(ys)
     if not axis_assignments: axis_assignments = [0]*len(ys)
 
     if type == 'stackbar' and stackbar_colors_denote == 'segments':
@@ -455,7 +455,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     # NOTE: for now, this assumes that either all series have numeric X axes or
     # none do.
     master_xnums = None
-    if type not in ('stackplot', 'bar', 'stackbar'):
+    if type not in ('stackplot', 'bar', 'barh', 'stackbar'):
         try:
             float(xs[0][0])
         except ValueError:
@@ -558,8 +558,11 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                 line = ax.errorbar(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
                     markeredgecolor=style['marker_edgecolor'],\
                     linewidth=linewidths[i], color=colors[i], label=labels[i],\
-                    alpha=alpha,\
+                    elinewidth=3, alpha=alpha,\
                     yerr=yerrs[i], **kwargs)
+
+                # don't draw error bars in legend
+                line = line[0]
             else:
                 line, = ax.plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
                     markeredgecolor=style['marker_edgecolor'], zorder=3,\
@@ -657,6 +660,50 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     elif type == 'stackplot':
         lines = ax.stackplot(xs, ys)
         ax.set_xticks(np.arange(min(xs), max(xs)+1, 1.0))
+
+    elif type == 'barh':
+
+
+
+        num_groups = max([len(series) for series in ys])  # num clusters of bars
+        num_series = len(ys)   # num bars in each cluster
+        
+        group_width = bar_width * num_series
+        ind = np.arange(bar_group_padding/2.0,\
+            num_groups*(bar_width*num_series+bar_group_padding) + bar_group_padding/2.0,\
+            group_width + bar_group_padding)
+        
+        log = yscale == 'log'
+        
+        color_squares = []
+        for i in range(len(ys)):
+            # I tend to think of the left-most bar in a normal bar plot as being
+            # the top-most bar in a horizontal bar plot
+            ys[i] = ys[i][::-1]  # reverse list
+            xs[i] = xs[i][::-1]  # reverse list
+
+            if type == 'barh':
+                alpha = 0 if i in skip_series else 1
+                yerr=yerrs[i] if yerrs else None
+                rects = ax.barh(ind + i*bar_width, ys[i], bar_width, log=log,\
+                    xerr=yerr, error_kw={'zorder':4, 'ecolor':'black'},
+                    alpha=alpha,\
+                    color=colors[i], edgecolor=style['bar_edgecolor'], zorder=3)
+                color_squares.append(rects[0])
+                if label_bars: autolabel(rects, ax)
+
+        ax.set_yticks(ind + num_series/2.0*bar_width)
+        if xtick_labels == None:
+            xtick_labels = xs[0]
+        ax.set_yticklabels(xtick_labels)
+        ax.set_ylim(0, ind[-1]+group_width+bar_group_padding/2.0)
+        ax.tick_params(axis='y', pad=15)
+
+        # for legend, used below
+        lines = color_squares
+
+    else:
+        print '[ERROR]  Unknown plot type: %s' % type
     
     
 
@@ -917,6 +964,11 @@ def stackplot(ys, sortindex=-1, **kwargs):
     x = np.arange(len(ys[0]))
 
     return plot(x, ys, xlim=(min(x), max(x)), type='stackplot', **kwargs)
+
+def barh(xs, ys, **kwargs):
+    '''Wrapper for horizontal bar charts'''
+    
+    return plot(xs, ys, type='barh', **kwargs)
     
 
 

@@ -601,7 +601,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                 rects = ax.bar(ind + i*bar_width, ys[i], bar_width, log=log,\
                     yerr=yerr, error_kw={'zorder':4, 'ecolor':'black'},
                     alpha=alpha,\
-                    color=colors[i], edgecolor=style['bar_edgecolor'], zorder=3)
+                    color=colors[i], edgecolor=style['bar_edgecolor'], zorder=3)  # don't use zorder, do what barh does
                 color_squares.append(rects[0])
                 if label_bars: autolabel(rects, ax)
             elif type == 'stackbar':
@@ -662,8 +662,12 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         ax.set_xticks(np.arange(min(xs), max(xs)+1, 1.0))
 
     elif type == 'barh':
-
-
+        # I tend to think of the left-most bar in a normal bar plot as 
+        # being the top-most bar in a horizontal bar plot
+        ys = ys[::-1]  # reverse list
+        xs = xs[::-1]  # reverse list
+        colors = colors[::-1]  # reverse list
+        # DON'T reverse labels, since we're going to add color swatches to legend backwards anyway
 
         num_groups = max([len(series) for series in ys])  # num clusters of bars
         num_series = len(ys)   # num bars in each cluster
@@ -677,8 +681,8 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         
         color_squares = []
         for i in range(len(ys)):
-            # I tend to think of the left-most bar in a normal bar plot as being
-            # the top-most bar in a horizontal bar plot
+            # I tend to think of the left-most bar group in a normal bar plot as 
+            # being the top-most bar group in a horizontal bar plot
             ys[i] = ys[i][::-1]  # reverse list
             xs[i] = xs[i][::-1]  # reverse list
 
@@ -688,8 +692,8 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                 rects = ax.barh(ind + i*bar_width, ys[i], bar_width, log=log,\
                     xerr=yerr, error_kw={'zorder':4, 'ecolor':'black'},
                     alpha=alpha,\
-                    color=colors[i], edgecolor=style['bar_edgecolor'], zorder=3)
-                color_squares.append(rects[0])
+                    color=colors[i], edgecolor=style['bar_edgecolor'])
+                color_squares.insert(0, rects[0])
                 if label_bars: autolabel(rects, ax)
 
         ax.set_yticks(ind + num_series/2.0*bar_width)
@@ -698,6 +702,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         ax.set_yticklabels(xtick_labels)
         ax.set_ylim(0, ind[-1]+group_width+bar_group_padding/2.0)
         ax.tick_params(axis='y', pad=15)
+        ax.set_axisbelow(True)  # bars on top of grid lines
 
         # for legend, used below
         lines = color_squares
@@ -814,6 +819,9 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         # not real keywords; manually put legend outside plot
         if legend_loc == 'below':  
             bbox_to_anchor=(0.5, -0.30)  #, 1., .102)
+            legend_loc='upper center'
+        elif legend_loc == 'above':  
+            bbox_to_anchor=(0.5, 1.5)  #, 1., .102)
             legend_loc='upper center'
         elif legend_loc == 'out right':
             bbox_to_anchor=(1.03, 1.0)

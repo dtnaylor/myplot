@@ -4,7 +4,9 @@ import numpy as np # import needed?
 
 # This stuff needs to be set before we import matplotlib.pyplot
 matplotlib.use('PDF')  # save plots as PDF
-font = {'size': 20,
+font = {
+    'size': 20,
+    'family': 'Myriad Pro',
 }
 #  'serif': 'Times New Roman',
 #  'family': 'serif'}
@@ -20,8 +22,9 @@ matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
 
-
+from matplotlib.legend_handler import HandlerPatch
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import matplotlib.ticker
 import os
 import numpy
@@ -53,6 +56,8 @@ default_style = {
     'ylabel_rotation':'vertical',
     'ylabel_textwrap_width': 80,
     'ylabel_pad': 0,  # TODO: check this
+    'xlabel_font_weight': 'normal',
+    'ylabel_font_weight': 'normal',
 }
 
 
@@ -79,7 +84,7 @@ pretty_style = {
     'linestyles': ('-', '--', '-.', ':'),
     'markerstyles': ('o', 'v', '^', 'D', 's', '<', '>', 'h', '8'), # more available
     'marker_edgecolor': 'white',
-    'hatchstyles': (None, 'o', '*', '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
+    'hatchstyles': (None, '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
     'textsize_delta': 4,
     'gridalpha':0.3,
     'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
@@ -91,6 +96,8 @@ pretty_style = {
     'ylabel_rotation':'vertical',
     'ylabel_textwrap_width': 80,
     'ylabel_pad': 20,  # TODO: check this
+    'xlabel_font_weight': 'bold',
+    'ylabel_font_weight': 'bold',
 }
 
 # TODO: text delta 0, set override in mctls plots
@@ -104,7 +111,7 @@ dark_bg_style = {
     'linestyles': ('-', '--', '-.', ':'),
     'markerstyles': ('o', 'v', '^', 'D', 's', '<', '>', 'h', '8'), # more available
     'marker_edgecolor': 'None',
-    'hatchstyles': (None, 'o', '*', '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
+    'hatchstyles': (None, '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
     'textsize_delta': 4,
     'gridalpha':0.5,
     'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
@@ -116,6 +123,8 @@ dark_bg_style = {
     'ylabel_rotation':'horizontal',
     'ylabel_textwrap_width': 80,
     'ylabel_pad': 70,
+    'xlabel_font_weight': 'bold',
+    'ylabel_font_weight': 'bold',
 }
 
 slide_style = {
@@ -123,7 +132,7 @@ slide_style = {
     'linestyles': ('-', '--', '-.', ':'),
     'markerstyles': ('o', 'v', '^', 'D', 's', '<', '>', 'h', '8'), # more available
     'marker_edgecolor': 'white',
-    'hatchstyles': (None, 'o', '*', '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
+    'hatchstyles': (None, '////', '\\\\\\\\', 'o', '+', '*', '//', '\\\\', '-', 'x', 'O', '.'),
     'textsize_delta': 4,
     'gridalpha':0.3,
     'frame_lines':{'top':False, 'right':False, 'bottom':True, 'left':True},
@@ -135,6 +144,8 @@ slide_style = {
     'ylabel_rotation':'horizontal',
     'ylabel_textwrap_width': 8,
     'ylabel_pad': 50,
+    'xlabel_font_weight': 'bold',
+    'ylabel_font_weight': 'bold',
 
     # overriede kw args to plot function
     'arg_override': {
@@ -153,6 +164,19 @@ slide_style = {
 ##
 ## HELPER FUNCTIONS
 ##
+
+# for square legend labels
+class HandlerSquare(HandlerPatch):
+    def create_artists(self, legend, orig_handle,
+                       xdescent, ydescent, width, height, fontsize, trans):
+        center = xdescent + (width - height), ydescent
+        p = mpatches.Rectangle(xy=center, width=height,
+                               height=height, angle=0.0)
+        self.update_prop(p, orig_handle, legend)
+        p.set_transform(trans)
+        return [p]
+
+
 def cdf_vals_from_data(data, numbins=None, maxbins=None):
 
     # make sure data is a numpy array
@@ -335,15 +359,19 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
          
          # LEGEND
          legend_loc='best',         # location: 'best', 'upper right', etc.
+         legend_bbox=None,
          show_legend=True,
          legend_border=False,
          legend_cols=1, 
+         legend_col_spacing=None,
          labelspacing=0.2,      # vertical spacing between labels?
          handletextpad=0.5,     # horizontal space b/w square and label?
+         pattern_legend_loc='best',         # location: 'best', 'upper right', etc.
+         pattern_legend_bbox=None,
          
          # TEXT SIZE
-         xlabel_size=20,
-         ylabel_size=20, 
+         xlabel_size=24,
+         ylabel_size=24, 
          ticklabel_size=20,
          legend_text_size=20,
 
@@ -418,12 +446,14 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
 
     #################### SETUP ####################
-    if xlabel: ax.set_xlabel(xlabel, color=style['foreground_color'],\
-        fontsize=xlabel_size + style['textsize_delta'])
-    if ylabel: ax.set_ylabel(textwrap.fill(ylabel, style['ylabel_textwrap_width']),\
-        color=style['foreground_color'],\
-        fontsize=ylabel_size + style['textsize_delta'],\
-        va='center', labelpad=style['ylabel_pad'],\
+    if xlabel: ax.set_xlabel(xlabel, color=style['foreground_color'],
+        fontsize=xlabel_size + style['textsize_delta'],
+        fontweight=style['xlabel_font_weight'])
+    if ylabel: ax.set_ylabel(textwrap.fill(ylabel, style['ylabel_textwrap_width']),
+        color=style['foreground_color'],
+        fontsize=ylabel_size + style['textsize_delta'],
+        fontweight=style['ylabel_font_weight'],
+        va='center', labelpad=style['ylabel_pad'],
         rotation=style['ylabel_rotation'])
     if not show_x_tick_labels: ax.set_xticklabels([])
     if not show_y_tick_labels: ax.set_yticklabels([])
@@ -443,7 +473,8 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     if not linewidths: linewidths = [4]*len(ys)
     if not axis_assignments: axis_assignments = [0]*len(ys)
 
-    if type == 'stackbar' and stackbar_colors_denote == 'segments':
+    if type == 'stackbar' and stackbar_colors_denote == 'segments'\
+            and stackbar_pattern_labels != None:
         temp = labels
         labels = list(reversed(stackbar_pattern_labels))
         stackbar_pattern_labels = temp
@@ -601,7 +632,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                 rects = ax.bar(ind + i*bar_width, ys[i], bar_width, log=log,\
                     yerr=yerr, error_kw={'zorder':4, 'ecolor':'black'},
                     alpha=alpha,\
-                    color=colors[i], edgecolor=style['bar_edgecolor'], zorder=3)  # don't use zorder, do what barh does
+                    color=colors[i], edgecolor=style['bar_edgecolor'])
                 color_squares.append(rects[0])
                 if label_bars: autolabel(rects, ax)
             elif type == 'stackbar':
@@ -616,7 +647,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                     
                     rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width, log=log,\
                         bottom=bottom, color=color, edgecolor=style['bar_edgecolor'],\
-                        hatch=hatchstyle, zorder=3)
+                        hatch=hatchstyle)
                     bottom = [sum(x) for x in zip(bottom, ys[i][j])]
                     if stackbar_colors_denote == 'series' and j == 0:
                         color_squares.append(rects[0])
@@ -633,14 +664,23 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                     n=[]
                     for k in range(num_segments):
                         n.append(ax.bar(0,0,color = "gray", hatch=hatchstyles[k],\
-                            edgecolor=style['bar_edgecolor']))
-                    if stackbar_colors_denote == 'series':
-                        n = reversed(n)
-                        stackbar_pattern_labels = reversed(stackbar_patter_labels)
+                            edgecolor=style['bar_edgecolor'])[0])
+                    if stackbar_colors_denote == 'series' and stackbar_pattern_labels != None:
+                        pass  # not sure why I reversed these before?
+                        #n = reversed(n)
+                        #stackbar_pattern_labels = reversed(stackbar_pattern_labels)
                     if stackbar_pattern_labels:
-                        pattern_legend = ax.legend(n, stackbar_pattern_labels,\
-                            loc='upper center', ncol=legend_cols, frameon=legend_border,\
-                            labelspacing=labelspacing, handletextpad=handletextpad,\
+                        # for square legend swatches
+                        handlermap = {}
+                        for swatch in n:
+                            handlermap[swatch] = HandlerSquare()
+
+                        pattern_legend = ax.legend(n, stackbar_pattern_labels,
+                            loc=pattern_legend_loc, ncol=legend_cols, frameon=legend_border,
+                            columnspacing=legend_col_spacing,
+                            bbox_to_anchor=pattern_legend_bbox,
+                            labelspacing=labelspacing, handletextpad=handletextpad,
+                            handler_map=handlermap,
                             prop={'size':legend_text_size + style['textsize_delta']})
                         ax.add_artist(pattern_legend)
                         
@@ -652,6 +692,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         ax.set_xticklabels(xtick_labels, horizontalalignment=xtick_label_horizontal_alignment,\
             rotation=xtick_label_rotation)
         ax.set_xlim(0, ind[-1]+group_width+bar_group_padding/2.0)
+        ax.set_axisbelow(True)  # bars on top of grid lines
 
         # for legend, used below
         lines = color_squares
@@ -667,6 +708,8 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         ys = ys[::-1]  # reverse list
         xs = xs[::-1]  # reverse list
         colors = colors[::-1]  # reverse list
+        if yerrs != None:
+            yerrs = yerrs[::-1]
         # DON'T reverse labels, since we're going to add color swatches to legend backwards anyway
 
         num_groups = max([len(series) for series in ys])  # num clusters of bars
@@ -811,26 +854,35 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
     #################### LEGEND ####################
     legend_loc = legend_loc.replace('top', 'upper').replace('bottom', 'lower')
-    bbox_to_anchor = None
     if show_legend and labels: 
         if type == 'stackplot':
             lines = [matplotlib.patches.Rectangle((0,0), 0,0, facecolor=pol.get_facecolor()[0]) for pol in lines]
 
         # not real keywords; manually put legend outside plot
         if legend_loc == 'below':  
-            bbox_to_anchor=(0.5, -0.30)  #, 1., .102)
+            legend_bbox=(0, -0.1, 1, 0)
             legend_loc='upper center'
         elif legend_loc == 'above':  
-            bbox_to_anchor=(0.5, 1.5)  #, 1., .102)
-            legend_loc='upper center'
+            legend_bbox=(0, 1.1, 1, 0)
+            legend_loc='lower center'
         elif legend_loc == 'out right':
-            bbox_to_anchor=(1.03, 1.0)
+            legend_bbox=(1.03, 1.0)
             legend_loc='upper left'
 
-        ax.legend(lines, labels, loc=legend_loc, ncol=legend_cols,\
-            bbox_to_anchor=bbox_to_anchor,\
-            frameon=legend_border, labelspacing=labelspacing,\
-            handletextpad=handletextpad,\
+
+        # for square legend swatches
+        handlermap = {}
+        if type in ('bar', 'barh', 'stackbar'):
+            for swatch in lines:
+                handlermap[swatch] = HandlerSquare()
+
+
+        ax.legend(lines, labels, loc=legend_loc, ncol=legend_cols,
+            columnspacing=legend_col_spacing,
+            bbox_to_anchor=legend_bbox,
+            frameon=legend_border, labelspacing=labelspacing,
+            handletextpad=handletextpad,
+            handler_map=handlermap,
             prop={'size':legend_text_size + style['textsize_delta']})
     else:
         ax.legend_ = None  # TODO: hacky

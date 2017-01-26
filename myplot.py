@@ -630,7 +630,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                 alpha = 0 if i in skip_series else 1
                 yerr=yerrs[i] if yerrs else None
                 rects = ax.bar(ind + i*bar_width, ys[i], bar_width, log=log,\
-                    yerr=yerr, error_kw={'zorder':4, 'ecolor':'black'},
+                    yerr=yerr, error_kw={'zorder':4, 'ecolor':'gray'},
                     alpha=alpha,\
                     color=colors[i], edgecolor=style['bar_edgecolor'])
                 color_squares.append(rects[0])
@@ -644,9 +644,11 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                     elif stackbar_colors_denote == 'segments':
                         color = colors[j]
                         hatchstyle = hatchstyles[i]
+                    yerr = yerrs[i][j] if yerrs else None
                     
-                    rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width, log=log,\
-                        bottom=bottom, color=color, edgecolor=style['bar_edgecolor'],\
+                    rects = ax.bar(ind + i*bar_width, ys[i][j], bar_width, log=log,
+                        yerr=yerr, error_kw={'zorder':4, 'ecolor':'gray'},
+                        bottom=bottom, color=color, edgecolor=style['bar_edgecolor'],
                         hatch=hatchstyle)
                     bottom = [sum(x) for x in zip(bottom, ys[i][j])]
                     if stackbar_colors_denote == 'series' and j == 0:

@@ -370,8 +370,8 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
          pattern_legend_bbox=None,
          
          # TEXT SIZE
-         xlabel_size=24,
-         ylabel_size=24, 
+         xlabel_size=20,
+         ylabel_size=20, 
          ticklabel_size=20,
          legend_text_size=20,
 

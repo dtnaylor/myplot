@@ -794,7 +794,8 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         ax.set_xticklabels(master_xticks, color=style['foreground_color'],\
             horizontalalignment=xtick_label_horizontal_alignment,\
              rotation=xtick_label_rotation)
-    if xscale == 'log':
+    if xscale == 'log' and ax.get_xlim()[1] < power_limits[1] and \
+            ax.get_xlim()[0] > power_limits[0]:
         #ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, pos: str(int(round(x)))))
         ax.xaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter('%d'))
         #ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
@@ -803,7 +804,8 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
     
     #################### Y TICKS ####################
-    if yscale == 'log':
+    if yscale == 'log' and ax.get_ylim()[1] < power_limits[1] and \
+            ax.get_ylim()[0] > power_limits[0]:
         #ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, pos: str(int(round(x)))))
         ax.yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter('%d'))
         #ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())

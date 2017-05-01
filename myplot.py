@@ -435,6 +435,8 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
     for i in range(len(ys)):
         ys[i] = numpy.vectorize(yval_transform)(ys[i])
+        if yerrs:
+            yerrs[i] = numpy.vectorize(yval_transform)(yerrs[i])
 
 
     #################### PLOT OBJECTS ####################

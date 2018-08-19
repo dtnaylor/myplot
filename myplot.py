@@ -435,7 +435,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
     for i in range(len(ys)):
         ys[i] = numpy.vectorize(yval_transform)(ys[i])
-        if yerrs:
+        if yerrs and yerrs[i]:
             yerrs[i] = numpy.vectorize(yval_transform)(yerrs[i])
 
 
@@ -577,18 +577,46 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
 
 
+    #################### ADDITONAL Y AXES ####################
+    axes = [ax]
+    if additional_ylabels:
+        for i in range(len(additional_ylabels)):
+            label = additional_ylabels[i]
+            new_ax = ax.twinx()
+            axes.append(new_ax)
+            new_ax.set_ylabel(label, fontsize=ylabel_size + style['textsize_delta'])
+            if additional_yscales:
+                new_ax.set_yscale(additional_yscales[i])
+            if additional_ylims:
+                new_ax.set_ylim(additional_ylims[i])
+                
+
+        ## plot the extra series
+        #for i in range(len(ys)):
+        #    # FIXME: index the correct addl y axis!
+        #    if axis_assignments[i] != 1: continue
+        #    marker = markerstyles[i] if show_markers else None
+        #    line, = addl_y_axes[0].plot(xs[i], ys[i], linestyle=linestyles[i],\
+        #        marker=marker,\
+        #        color=colors[i], label=labels[i], **kwargs)
+        #    lines[i] = line
+        #    if yerrs:
+        #        addl_y_axes[0].fill_between(xs[i], numpy.array(ys[i])+numpy.array(yerrs[i]),\
+        #        numpy.array(ys[i])-numpy.array(yerrs[i]), color=colors[i], alpha=0.5)
+
+
     #################### PLOT ####################
     if type == 'series':
         for i in range(len(ys)):
-            if axis_assignments[i] != 0: continue
+            the_ax = axes[axis_assignments[i]]
 
             marker = markerstyles[i] if show_markers else None
             alpha = 0 if i in skip_series else 1
 
 
             # TODO: simplify these two cases? repetitive.
-            if yerrs and style['errorbar_style'] == 'line':
-                line = ax.errorbar(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
+            if yerrs is not None and yerrs[i] is not  None and style['errorbar_style'] == 'line':
+                line = the_ax.errorbar(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
                     markeredgecolor=style['marker_edgecolor'],\
                     linewidth=linewidths[i], color=colors[i], label=labels[i],\
                     elinewidth=3, alpha=alpha,\
@@ -597,17 +625,23 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
                 # don't draw error bars in legend
                 line = line[0]
             else:
-                line, = ax.plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
+                line, = the_ax.plot(xs[i], ys[i], linestyle=linestyles[i], marker=marker,\
                     markeredgecolor=style['marker_edgecolor'], zorder=3,\
                     alpha=alpha,\
                     linewidth=linewidths[i], color=colors[i], label=labels[i], **kwargs)
 
             lines[i] = line
 
-            if yerrs and style['errorbar_style'] == 'fill':
-                yerr_upper = numpy.array(ys[i])+numpy.array(yerrs[i])
-                yerr_lower = numpy.array(ys[i])-numpy.array(yerrs[i])
-                ax.fill_between(xs[i], yerr_lower, yerr_upper, color=colors[i], alpha=0.5)
+            if yerrs is not None and yerrs[i] is not None and style['errorbar_style'] == 'fill':
+                yerr_lower, yerr_upper = 0, 0
+                if isinstance(yerrs[i][0], numpy.ndarray):
+                    yerr_lower = numpy.array(map(lambda x: x[0], yerrs[i]))
+                    yerr_upper = numpy.array(map(lambda x: x[1], yerrs[i]))
+                else:
+                    yerr_lower = numpy.array(ys[i])-numpy.array(yerrs[i])
+                    yerr_upper = numpy.array(ys[i])+numpy.array(yerrs[i])
+                    
+                the_ax.fill_between(xs[i], yerr_lower, yerr_upper, color=colors[i], alpha=0.5)
 
     elif type == 'bar' or type == 'stackbar':
         if type == 'bar':
@@ -813,34 +847,6 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         #ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
     for tl in ax.get_yticklabels():
         tl.set_color(style['foreground_color'])
-
-
-    #################### ADDITONAL Y AXES ####################
-    if additional_ylabels:
-        addl_y_axes = []
-        for label in additional_ylabels:
-            new_ax = ax.twinx()
-            addl_y_axes.append(new_ax)
-            new_ax.set_ylabel(label, fontsize=ylabel_size + style['textsize_delta'])
-            #new_ax.set_yticklabels([]) # temp
-            if additional_yscales:
-                new_ax.set_yscale(additional_yscales[0])  # TODO: use real index!
-            if additional_ylims:
-                new_ax.set_ylim(additional_ylims[0])  # TODO: use real index!
-                
-
-        # plot the extra series
-        for i in range(len(ys)):
-            # FIXME: index the correct addl y axis!
-            if axis_assignments[i] != 1: continue
-            marker = markerstyles[i] if show_markers else None
-            line, = addl_y_axes[0].plot(xs[i], ys[i], linestyle=linestyles[i],\
-                marker=marker,\
-                color=colors[i], label=labels[i], **kwargs)
-            lines[i] = line
-            if yerrs:
-                addl_y_axes[0].fill_between(xs[i], numpy.array(ys[i])+numpy.array(yerrs[i]),\
-                numpy.array(ys[i])-numpy.array(yerrs[i]), color=colors[i], alpha=0.5)
 
 
     #################### GUIDE LINES ####################

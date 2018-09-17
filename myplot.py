@@ -327,7 +327,7 @@ def plot(xs, ys, filename='figure.pdf', builds=[], style=pretty_style, **kwargs)
 
     return _plot(xs, ys, style=style, filename=filename, **kwargs)
 
-def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
+def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, ylabels=None, title=None,
          type='series', filename=None, yerrs=None,
 
          # STYLE
@@ -382,6 +382,7 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
          yscale=None,           # 'linear', 'log', or 'symlog'  (None->'linear')
          xlim=None,             # (min, max)  min & max can be individually set to None for default
          ylim=None,             # (min, max)  min & max can be individually set to None for default
+         ylims=None,            # (min, max)  min & max can be individually set to None for default
          # TODO : add min or max options
 
          # OTHER
@@ -427,6 +428,22 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
 
     for key, val in style_override.iteritems():
         style[key] = val
+
+    if ylabel != None:
+        print '[WARNING]  ylabel is deprecated. Use ylabels instead.'
+        ylabels = [ylabel]
+
+    if additional_ylabels != None:
+        print '[WARNING]  additional_ylabels is deprecated. Use ylabels instead.'
+        ylabels += additional_ylabels
+
+    if ylim != None:
+        print '[WARNING]  ylim is deprecated. Use ylims instead.'
+        ylims = [ylim]
+
+    if additional_ylims != None:
+        print '[WARNING]  additional_ylims is deprecated. Use ylims instead.'
+        ylims += additional_ylims
     
     
     #################### TRANSFORM DATA ####################
@@ -447,28 +464,54 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         fig.set_size_inches(width*width_scale, height*height_scale)
 
 
+    #################### ADDITONAL Y AXES ####################
+    axes = [ax]
+    if axis_assignments:
+        for i in range(max(axis_assignments)):
+            new_ax = ax.twinx()
+            axes.append(new_ax)
+            if additional_yscales:
+                new_ax.set_yscale(additional_yscales[i])
+                
+
+        ## plot the extra series
+        #for i in range(len(ys)):
+        #    # FIXME: index the correct addl y axis!
+        #    if axis_assignments[i] != 1: continue
+        #    marker = markerstyles[i] if show_markers else None
+        #    line, = addl_y_axes[0].plot(xs[i], ys[i], linestyle=linestyles[i],\
+        #        marker=marker,\
+        #        color=colors[i], label=labels[i], **kwargs)
+        #    lines[i] = line
+        #    if yerrs:
+        #        addl_y_axes[0].fill_between(xs[i], numpy.array(ys[i])+numpy.array(yerrs[i]),\
+        #        numpy.array(ys[i])-numpy.array(yerrs[i]), color=colors[i], alpha=0.5)
+
+
     #################### SETUP ####################
-    if xlabel: ax.set_xlabel(xlabel, color=style['foreground_color'],
-        fontsize=xlabel_size + style['textsize_delta'],
-        fontweight=style['xlabel_font_weight'])
-    if ylabel: ax.set_ylabel(textwrap.fill(ylabel, style['ylabel_textwrap_width']),
-        color=style['foreground_color'],
-        fontsize=ylabel_size + style['textsize_delta'],
-        fontweight=style['ylabel_font_weight'],
-        va='center', labelpad=style['ylabel_pad'],
-        rotation=style['ylabel_rotation'])
-    if not show_x_tick_labels: ax.set_xticklabels([])
-    if not show_y_tick_labels: ax.set_yticklabels([])
-    if title: ax.set_title(title, color=style['foreground_color'])
-    if axis: 
-        ax.set_xlim(axis[0:2])
-        ax.set_ylim(axis[2:4])
-    if xscale: ax.set_xscale(xscale)
-    if yscale: ax.set_yscale(yscale)
-    if isinstance(ax.xaxis.get_major_formatter(), matplotlib.ticker.ScalarFormatter):
-        ax.xaxis.get_major_formatter().set_powerlimits(power_limits)
-    if isinstance(ax.yaxis.get_major_formatter(), matplotlib.ticker.ScalarFormatter):
-        ax.yaxis.get_major_formatter().set_powerlimits(power_limits)
+    for i in range(len(axes)):
+        ax = axes[i]
+        if xlabel: ax.set_xlabel(xlabel, color=style['foreground_color'],
+            fontsize=xlabel_size + style['textsize_delta'],
+            fontweight=style['xlabel_font_weight'])
+        if ylabels: ax.set_ylabel(textwrap.fill(ylabels[i], style['ylabel_textwrap_width']),
+            color=style['foreground_color'],
+            fontsize=ylabel_size + style['textsize_delta'],
+            fontweight=style['ylabel_font_weight'],
+            va='center', labelpad=style['ylabel_pad'],
+            rotation=style['ylabel_rotation'])
+        if not show_x_tick_labels: ax.set_xticklabels([])
+        if not show_y_tick_labels: ax.set_yticklabels([])
+        if title: ax.set_title(title, color=style['foreground_color'])
+        if axis: 
+            ax.set_xlim(axis[0:2])
+            ax.set_ylim(axis[2:4])
+        if xscale: ax.set_xscale(xscale)
+        if yscale: ax.set_yscale(yscale)
+        if isinstance(ax.xaxis.get_major_formatter(), matplotlib.ticker.ScalarFormatter):
+            ax.xaxis.get_major_formatter().set_powerlimits(power_limits)
+        if isinstance(ax.yaxis.get_major_formatter(), matplotlib.ticker.ScalarFormatter):
+            ax.yaxis.get_major_formatter().set_powerlimits(power_limits)
     lines = [None]*len(ys)
     show_legend = show_legend and labels != None
     if not labels: labels = ['']*len(ys)
@@ -575,34 +618,6 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
         else:
             plt.grid(**grid_args)
 
-
-
-    #################### ADDITONAL Y AXES ####################
-    axes = [ax]
-    if additional_ylabels:
-        for i in range(len(additional_ylabels)):
-            label = additional_ylabels[i]
-            new_ax = ax.twinx()
-            axes.append(new_ax)
-            new_ax.set_ylabel(label, fontsize=ylabel_size + style['textsize_delta'])
-            if additional_yscales:
-                new_ax.set_yscale(additional_yscales[i])
-            if additional_ylims:
-                new_ax.set_ylim(additional_ylims[i])
-                
-
-        ## plot the extra series
-        #for i in range(len(ys)):
-        #    # FIXME: index the correct addl y axis!
-        #    if axis_assignments[i] != 1: continue
-        #    marker = markerstyles[i] if show_markers else None
-        #    line, = addl_y_axes[0].plot(xs[i], ys[i], linestyle=linestyles[i],\
-        #        marker=marker,\
-        #        color=colors[i], label=labels[i], **kwargs)
-        #    lines[i] = line
-        #    if yerrs:
-        #        addl_y_axes[0].fill_between(xs[i], numpy.array(ys[i])+numpy.array(yerrs[i]),\
-        #        numpy.array(ys[i])-numpy.array(yerrs[i]), color=colors[i], alpha=0.5)
 
 
     #################### PLOT ####################
@@ -794,14 +809,17 @@ def _plot(xs, ys, labels=None, xlabel=None, ylabel=None, title=None,
     
 
     #################### AXIS RANGES ####################
-    if xlim:
-        xmin = xlim[0] if xlim[0] is not None else ax.get_xlim()[0]
-        xmax = xlim[1] if xlim[1] is not None else ax.get_xlim()[1]
-        ax.set_xlim((xmin, xmax))
-    if ylim:
-        ymin = ylim[0] if ylim[0] is not None else ax.get_ylim()[0]
-        ymax = ylim[1] if ylim[1] is not None else ax.get_ylim()[1]
-        ax.set_ylim((ymin, ymax))
+    for i in range(len(axes)):
+        ax = axes[i]
+        if xlim:
+            xmin = xlim[0] if xlim[0] is not None else ax.get_xlim()[0]
+            xmax = xlim[1] if xlim[1] is not None else ax.get_xlim()[1]
+            ax.set_xlim((xmin, xmax))
+        if ylims and ylims[i]:
+            ylim = ylims[i]
+            ymin = ylim[0] if ylim[0] is not None else ax.get_ylim()[0]
+            ymax = ylim[1] if ylim[1] is not None else ax.get_ylim()[1]
+            ax.set_ylim((ymin, ymax))
 
 
             

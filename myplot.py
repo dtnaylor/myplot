@@ -153,7 +153,6 @@ slide_style = {
         #'legend_cols': 5,
         'labelspacing': 0.3,
         'guide_lines': [],  # TODO remove?
-        'ylim': (0, None),
     },
 }
     
